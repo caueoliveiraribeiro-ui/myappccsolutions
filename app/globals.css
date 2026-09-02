@@ -133,9 +133,18 @@ select { min-height: 2.5rem; width: 100%; border-radius: .5rem; border: 1px soli
 
 @keyframes brand-sweep { 0%,12% { transform: translate(-18px,-5px) rotate(-9deg); opacity: 0; } 22% { opacity: .9; } 52% { transform: translate(120px,12px) rotate(7deg); opacity: 1; } 74%,100% { transform: translate(245px,-2px) rotate(-5deg); opacity: 0; } }
 @keyframes login-float { 0%,100% { transform: translate3d(0,0,0) scale(1); } 50% { transform: translate3d(18px,-20px,0) scale(1.08); } }
+@keyframes shell-drift { 0%,100% { transform:perspective(1200px) translate3d(0,0,0) rotateX(0) rotateY(0); } 50% { transform:perspective(1200px) translate3d(0,-7px,0) rotateX(.35deg) rotateY(-.45deg); } }
+@keyframes aurora-drift { 0%,100% { transform:translate3d(-1%,0,0) scale(1); } 50% { transform:translate3d(2%,1%,0) scale(1.045); } }
+@keyframes chip-breathe { 0%,100% { transform:translateY(0); border-color:rgba(255,255,255,.1); } 50% { transform:translateY(-3px); border-color:rgba(34,211,238,.28); } }
 .brand-magnifier { z-index: 5; filter: drop-shadow(0 0 10px rgba(103,232,249,.6)); animation: brand-sweep 5.8s cubic-bezier(.45,0,.25,1) infinite; pointer-events: none; }
 .brand-scan::after { content:""; position:absolute; inset:-12px -20px; background:linear-gradient(105deg,transparent 35%,rgba(103,232,249,.1) 49%,transparent 63%); background-size:220% 100%; animation:brand-sweep 5.8s cubic-bezier(.45,0,.25,1) infinite; pointer-events:none; }
 .login-orb { position:absolute; width:220px; height:220px; border-radius:999px; background:rgba(34,211,238,.055); filter:blur(24px); animation:login-float 7s ease-in-out infinite; }
 .animation-delay-2 { animation-delay:-3.5s; background:rgba(139,92,246,.06); }
-@media (prefers-reduced-motion: reduce) { .brand-magnifier,.brand-scan::after,.login-orb { animation:none; } .brand-magnifier { opacity:.65; transform:translate(210px,0); } }
+.login-shell { animation:shell-drift 8s ease-in-out infinite; transform-style:preserve-3d; }
+.login-aurora { animation:aurora-drift 11s ease-in-out infinite; }
+.login-grid { opacity:.16; background-image:linear-gradient(rgba(103,232,249,.08) 1px,transparent 1px),linear-gradient(90deg,rgba(103,232,249,.08) 1px,transparent 1px); background-size:64px 64px; mask-image:radial-gradient(circle at 50% 50%,black,transparent 75%); }
+.feature-chip { animation:chip-breathe 4s ease-in-out infinite; }
+.feature-chip svg { color:#67e8f9; filter:drop-shadow(0 0 7px rgba(34,211,238,.9)); stroke-width:2.2; }
+.current-price-pill { border:1px solid rgba(103,232,249,.9); color:#cffafe; background:linear-gradient(135deg,rgba(34,211,238,.24),rgba(59,130,246,.16)); box-shadow:inset 0 0 20px rgba(34,211,238,.18),0 0 10px rgba(34,211,238,.55),0 0 28px rgba(34,211,238,.3); font-weight:600; white-space:nowrap; }
+@media (prefers-reduced-motion: reduce) { .brand-magnifier,.brand-scan::after,.login-orb,.login-shell,.login-aurora,.feature-chip { animation:none; } .brand-magnifier { opacity:.65; transform:translate(210px,0); } }
 
