@@ -125,3 +125,6 @@
   }
 }
 
+input[type="date"], input[type="month"] { color-scheme: dark; border-color: rgba(34,211,238,.22); }
+input[type="date"]::-webkit-calendar-picker-indicator, input[type="month"]::-webkit-calendar-picker-indicator { filter: invert(84%) sepia(74%) saturate(1396%) hue-rotate(149deg) brightness(96%); cursor: pointer; }
+
