@@ -26,6 +26,25 @@ alter table if exists public.holdings add column if not exists market text;
 alter table if exists public.holdings add column if not exists quote_currency text;
 alter table if exists public.holdings add column if not exists change_24h numeric default 0;
 
+-- Preserve the original purchase currency for older holdings so changing the
+-- user's default currency converts values instead of only changing the label.
+update public.holdings as holding
+set quote_currency = portfolio.currency
+from public.portfolios as portfolio
+where holding.portfolio_id = portfolio.id
+  and (holding.quote_currency is null or holding.quote_currency = '')
+  and portfolio.currency is not null;
+
+update public.holdings
+set quote_currency = case market
+  when 'BR' then 'BRL' when 'US' then 'USD' when 'GB' then 'GBP'
+  when 'CA' then 'CAD' when 'AU' then 'AUD' when 'JP' then 'JPY'
+  when 'KR' then 'KRW' when 'MX' then 'MXN' when 'CH' then 'CHF'
+  when 'DE' then 'EUR' when 'FR' then 'EUR' when 'ES' then 'EUR'
+  when 'IT' then 'EUR' when 'PT' then 'EUR' when 'NL' then 'EUR'
+  else quote_currency end
+where quote_currency is null or quote_currency = '';
+
 update public.leads set status = 'Client' where status = 'Won';
 
 create unique index if not exists clients_user_source_lead_unique
