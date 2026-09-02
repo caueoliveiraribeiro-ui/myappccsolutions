@@ -4,6 +4,7 @@
 alter table if exists public.projects add column if not exists description text default '';
 alter table if exists public.projects add column if not exists cost numeric default 0;
 alter table if exists public.projects add column if not exists source_lead_id uuid;
+alter table if exists public.projects add column if not exists currency text;
 
 alter table if exists public.clients add column if not exists description text default '';
 alter table if exists public.clients add column if not exists last_call_date date;
@@ -11,15 +12,19 @@ alter table if exists public.clients add column if not exists source_lead_id uui
 alter table if exists public.clients add column if not exists charge_date date;
 alter table if exists public.clients add column if not exists service_amount numeric default 0;
 alter table if exists public.clients add column if not exists billing_frequency text default 'One-time';
+alter table if exists public.clients add column if not exists currency text;
 
 alter table if exists public.leads add column if not exists phone text default '';
 alter table if exists public.leads add column if not exists description text default '';
 alter table if exists public.leads add column if not exists last_call_date date;
 alter table if exists public.leads add column if not exists directory_hidden boolean default false;
+alter table if exists public.leads add column if not exists currency text;
 
 alter table if exists public.expenses add column if not exists subcategory text default '';
 alter table if exists public.expenses add column if not exists notes text default '';
+alter table if exists public.expenses add column if not exists currency text;
 alter table if exists public.grocery_items add column if not exists subcategory text default '';
+alter table if exists public.grocery_items add column if not exists currency text;
 
 alter table if exists public.holdings add column if not exists remaining_quantity numeric;
 alter table if exists public.holdings add column if not exists market text;
@@ -44,6 +49,12 @@ set quote_currency = case market
   when 'IT' then 'EUR' when 'PT' then 'EUR' when 'NL' then 'EUR'
   else quote_currency end
 where quote_currency is null or quote_currency = '';
+
+update public.projects as item set currency = profile.currency from public.user_profiles as profile where item.user_id = profile.user_id and item.currency is null;
+update public.clients as item set currency = profile.currency from public.user_profiles as profile where item.user_id = profile.user_id and item.currency is null;
+update public.leads as item set currency = profile.currency from public.user_profiles as profile where item.user_id = profile.user_id and item.currency is null;
+update public.expenses as item set currency = profile.currency from public.user_profiles as profile where item.user_id = profile.user_id and item.currency is null;
+update public.grocery_items as item set currency = profile.currency from public.user_profiles as profile where item.user_id = profile.user_id and item.currency is null;
 
 update public.leads set status = 'Client' where status = 'Won';
 
