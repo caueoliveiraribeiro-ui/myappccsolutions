@@ -1,0 +1,3 @@
+import{NextResponse}from"next/server";import{cookies}from"next/headers";import{getSession,OWNER_ID}from"@/lib/auth";import{db}from"@/lib/supabase"
+export async function GET(){const token=(await cookies()).get("orbit_session")?.value,user=token?await getSession(token):null;if(!user)return NextResponse.json({error:"Unauthorized"},{status:401});if(user.id===OWNER_ID)return NextResponse.json({id:user.id,name:"Cauê Oliveira",email:user.email});try{const rows=await db(`app_users?id=eq.${user.id}&select=id,name,email&limit=1`);return NextResponse.json(rows[0]||{id:user.id,name:"Orbit User",email:user.email})}catch{return NextResponse.json({id:user.id,name:"Orbit User",email:user.email})}}
+
