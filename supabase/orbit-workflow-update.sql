@@ -10,6 +10,7 @@ alter table if exists public.clients add column if not exists last_call_date dat
 alter table if exists public.clients add column if not exists source_lead_id uuid;
 alter table if exists public.clients add column if not exists charge_date date;
 alter table if exists public.clients add column if not exists service_amount numeric default 0;
+alter table if exists public.clients add column if not exists billing_frequency text default 'One-time';
 
 alter table if exists public.leads add column if not exists phone text default '';
 alter table if exists public.leads add column if not exists description text default '';
