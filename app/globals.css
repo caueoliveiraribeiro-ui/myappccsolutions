@@ -146,6 +146,12 @@ select { min-height: 2.5rem; width: 100%; border-radius: .5rem; border: 1px soli
 .brand-scan > .flex > .grid svg { width:42px; height:42px; }
 aside > .mb-4:first-child { display:none; }
 .login-grid { opacity:.16; background-image:linear-gradient(rgba(103,232,249,.08) 1px,transparent 1px),linear-gradient(90deg,rgba(103,232,249,.08) 1px,transparent 1px); background-size:64px 64px; mask-image:radial-gradient(circle at 50% 50%,black,transparent 75%); }
+.login-grid::before { content:""; position:absolute; inset:-5%; background:url('/orbit-background.png') center/cover no-repeat; opacity:.32; filter:saturate(1.2); animation:background-orbit 18s ease-in-out infinite alternate; }
+@keyframes background-orbit { from { transform:scale(1.03) translate3d(-1%,0,0); } to { transform:scale(1.12) translate3d(2%,-1%,0); } }
+.login-shell section button.group { display:none; }
+.feature-chip { padding:.65rem .9rem; background:linear-gradient(135deg,rgba(34,211,238,.1),rgba(139,92,246,.08)); }
+[class*="border-white"], [class*="border-cyan"] { border-color:rgba(77,222,255,.22); }
+.rounded-xl[class*="border"], .rounded-2xl[class*="border"], .rounded-3xl[class*="border"] { box-shadow:inset 0 0 14px rgba(34,211,238,.025),0 0 10px rgba(34,211,238,.035); }
 .feature-chip { animation:chip-breathe 4s ease-in-out infinite; }
 .feature-chip svg { color:#67e8f9; filter:drop-shadow(0 0 7px rgba(34,211,238,.9)); stroke-width:2.2; }
 .current-price-pill { border:1px solid rgba(103,232,249,.9); color:#cffafe; background:linear-gradient(135deg,rgba(34,211,238,.24),rgba(59,130,246,.16)); box-shadow:inset 0 0 20px rgba(34,211,238,.18),0 0 10px rgba(34,211,238,.55),0 0 28px rgba(34,211,238,.3); font-weight:600; white-space:nowrap; }
