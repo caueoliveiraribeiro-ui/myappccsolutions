@@ -8,10 +8,13 @@ alter table if exists public.projects add column if not exists source_lead_id uu
 alter table if exists public.clients add column if not exists description text default '';
 alter table if exists public.clients add column if not exists last_call_date date;
 alter table if exists public.clients add column if not exists source_lead_id uuid;
+alter table if exists public.clients add column if not exists charge_date date;
+alter table if exists public.clients add column if not exists service_amount numeric default 0;
 
 alter table if exists public.leads add column if not exists phone text default '';
 alter table if exists public.leads add column if not exists description text default '';
 alter table if exists public.leads add column if not exists last_call_date date;
+alter table if exists public.leads add column if not exists directory_hidden boolean default false;
 
 alter table if exists public.expenses add column if not exists subcategory text default '';
 alter table if exists public.expenses add column if not exists notes text default '';
