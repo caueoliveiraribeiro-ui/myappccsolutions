@@ -2,6 +2,7 @@ import type React from "react"
 import type { Metadata } from "next"
 import { Figtree } from "next/font/google"
 import "./globals.css"
+import { Toaster } from "@/components/ui/sonner"
 
 const figtree = Figtree({
   subsets: ["latin"],
@@ -10,9 +11,8 @@ const figtree = Figtree({
 })
 
 export const metadata: Metadata = {
-  title: "v0 App",
-  description: "Created with v0",
-  generator: "v0.app",
+  title: "Orbit CRM — Global Growth OS",
+  description: "Secure CRM for worldwide lead discovery, creative sales and investment tracking.",
 }
 
 export default function RootLayout({
@@ -22,7 +22,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${figtree.variable} antialiased`}>
-      <body className="font-sans">{children}</body>
+      <body className="font-sans">{children}<Toaster richColors theme="dark" /></body>
     </html>
   )
 }
+
