@@ -68,28 +68,17 @@ export function holdingMarketTotal(
   quotes: Record<string, number>,
   convert: (amount: unknown, row: Row) => number,
 ) {
-  const assets = new Map<string, { quantity: number; fallback: Row }>()
-
-  for (const holding of holdings) {
+  return holdings.reduce((total, holding) => {
     const key = `${holding.asset_type}:${String(holding.symbol || "").toUpperCase()}`
     const quantity = Number(holding.remaining_quantity ?? holding.quantity ?? 0)
-    if (!key.endsWith(":") && quantity > 0) {
-      const existing = assets.get(key)
-      const currentDate = String(holding.updated_at || holding.created_at || holding.purchased_at || "")
-      const fallbackDate = String(existing?.fallback?.updated_at || existing?.fallback?.created_at || existing?.fallback?.purchased_at || "")
-      assets.set(key, {
-        quantity: Number(existing?.quantity || 0) + quantity,
-        fallback: !existing || currentDate >= fallbackDate ? holding : existing.fallback,
-      })
-    }
-  }
+    if (key.endsWith(":") || quantity <= 0) return total
 
-  return [...assets.entries()].reduce((total, [key, asset]) => {
     const livePrice = quotes[key]
-    const currentPrice = Number.isFinite(livePrice)
+    const convertedPrice = Number.isFinite(livePrice)
       ? livePrice
-      : convert(asset.fallback.current_price, asset.fallback)
-    return total + asset.quantity * Number(currentPrice || 0)
+      : convert(holding.current_price, holding)
+
+    return total + quantity * Number(convertedPrice || 0)
   }, 0)
 }
 
