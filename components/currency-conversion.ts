@@ -8,32 +8,38 @@ export function recordCurrency(row: Row, fallback: string) {
   return String(row.quote_currency || row.currency || fallback).toUpperCase()
 }
 
+const rateCache: Record<string, Record<string, number>> = {}
 export function useCurrencyRates(rows: Row[], targetCurrency: string) {
-  const [rates, setRates] = useState<Record<string, number>>({})
-  const sourceKey = [...new Set(rows.map(row => recordCurrency(row, targetCurrency)).filter(source => source !== targetCurrency))].sort().join(",")
-
+  const target = targetCurrency.toUpperCase()
+  const [state, setState] = useState<{target:string; rates:Record<string,number>}>({target, rates:rateCache[target] || {}})
+  const sourceKey = [...new Set(rows.map(row => recordCurrency(row, target)).filter(source => source !== target))].sort().join(",")
   useEffect(() => {
+    let cancelled = false
     const sources = sourceKey ? sourceKey.split(",") : []
-    if (!sources.length) {
-      setRates({})
-      return
-    }
-
     Promise.all(sources.map(async source => {
       try {
-        const response = await fetch(`/api/fx?from=${encodeURIComponent(source)}&to=${encodeURIComponent(targetCurrency)}`)
-        const data = await response.json().catch(() => ({}))
-        if (!response.ok || !Number.isFinite(Number(data.rate))) throw new Error()
-        return [source, Number(data.rate)] as const
+        const response = await fetch(`/api/fx?from=${encodeURIComponent(source)}&to=${encodeURIComponent(target)}`)
+        const data = await response.json()
+        const rate = Number(data.rate)
+        if (!response.ok || !Number.isFinite(rate) || rate <= 0) throw Error("Invalid exchange rate")
+        return [source, rate] as const
       } catch {
-        return [source, 1] as const
+        return [source, rateCache[target]?.[source] ?? Number.NaN] as const
       }
-    })).then(entries => setRates(Object.fromEntries(entries)))
-  }, [sourceKey, targetCurrency])
-
+    })).then(entries => {
+      if (cancelled) return
+      const rates = {...rateCache[target], ...Object.fromEntries(entries)}
+      rateCache[target] = rates
+      setState({target, rates})
+    })
+    return () => { cancelled = true }
+  }, [sourceKey, target])
   return (amount: unknown, row: Row) => {
-    const source = recordCurrency(row, targetCurrency)
-    return Number(amount || 0) * (source === targetCurrency ? 1 : rates[source] || 1)
+    const value = Number(amount || 0)
+    if (value === 0) return 0
+    const source = recordCurrency(row, target)
+    const rate = source === target ? 1 : (state.target === target ? state.rates[source] : rateCache[target]?.[source])
+    return Number.isFinite(rate) ? value * Number(rate) : Number.NaN
   }
 }
 
@@ -81,4 +87,3 @@ export function holdingMarketTotal(
     return total + quantity * Number(convertedPrice || 0)
   }, 0)
 }
-

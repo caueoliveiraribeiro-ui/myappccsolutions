@@ -100,4 +100,38 @@ create unique index if not exists payment_records_user_source_project_unique
   on public.payment_records (user_id, source_project_id)
   where source_project_id is not null;
 
+alter table public.payment_records enable row level security;
 
+-- Capture payment in the same transaction as the project status change.
+create or replace function public.orbit_capture_project_payment()
+returns trigger language plpgsql security invoker set search_path = public as $$
+begin
+  if new.stage = 'Payment received' then
+    if TG_OP = 'UPDATE' then
+      if old.stage = 'Payment received' then return new; end if;
+    end if;
+    insert into public.payment_records
+      (user_id,source_project_id,project_name,client_name,amount,currency,received_at,method,reference,notes)
+    values
+      (new.user_id,new.id,new.name,new.client,coalesce(new.budget,0)-coalesce(new.cost,0),
+       coalesce(nullif(new.currency,''),'USD'),coalesce(new.payment_date,current_date),
+       coalesce(nullif(new.payment_method,''),'Other'),coalesce(new.payment_reference,''),coalesce(new.payment_notes,''))
+    on conflict (user_id,source_project_id) where source_project_id is not null
+    do update set amount=excluded.amount,currency=excluded.currency,received_at=excluded.received_at,
+      project_name=excluded.project_name,client_name=excluded.client_name,
+      method=excluded.method,reference=excluded.reference,notes=excluded.notes,updated_at=now();
+  end if;
+  return new;
+end;
+$$;
+drop trigger if exists orbit_project_payment on public.projects;
+create trigger orbit_project_payment after insert or update of stage on public.projects
+for each row execute function public.orbit_capture_project_payment();
+
+insert into public.payment_records
+  (user_id,source_project_id,project_name,client_name,amount,currency,received_at,method,reference,notes)
+select user_id,id,name,client,coalesce(budget,0)-coalesce(cost,0),coalesce(nullif(currency,''),'USD'),
+  coalesce(payment_date,updated_at::date,current_date),coalesce(nullif(payment_method,''),'Other'),
+  coalesce(payment_reference,''),coalesce(payment_notes,'')
+from public.projects where stage='Payment received'
+on conflict (user_id,source_project_id) where source_project_id is not null do nothing;
