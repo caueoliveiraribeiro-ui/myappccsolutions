@@ -135,3 +135,57 @@ select user_id,id,name,client,coalesce(budget,0)-coalesce(cost,0),coalesce(nulli
   coalesce(payment_reference,''),coalesce(payment_notes,'')
 from public.projects where stage='Payment received'
 on conflict (user_id,source_project_id) where source_project_id is not null do nothing;
+
+-- Lead archiving does not delete related clients, projects or payment history.
+alter table public.leads add column if not exists archived boolean not null default false;
+create index if not exists leads_owner_archive_idx on public.leads(user_id,archived);
+
+-- Reminder snapshots survive deletion of a client; invoices are not generated yet.
+alter table public.tasks add column if not exists billing_client_id uuid;
+alter table public.tasks add column if not exists billing_due_date date;
+alter table public.tasks add column if not exists billing_amount numeric default 0;
+alter table public.tasks add column if not exists billing_currency text default 'USD';
+alter table public.tasks add column if not exists invoice_number text default '';
+alter table public.tasks add column if not exists kind text default 'Task';
+alter table public.tasks add column if not exists notes text default '';
+create unique index if not exists tasks_billing_occurrence_unique
+  on public.tasks(user_id,billing_client_id,billing_due_date)
+  where billing_client_id is not null;
+
+create or replace function public.orbit_create_billing_reminders(p_owner uuid default null)
+returns integer language plpgsql security invoker set search_path=public as $$
+declare inserted integer;
+begin
+  insert into public.tasks(user_id,title,kind,status,priority,due_date,notes,
+    billing_client_id,billing_due_date,billing_amount,billing_currency,invoice_number)
+  select c.user_id,'Charge Client ('||c.name||')','Task','Open','High',c.charge_date,
+    concat_ws(E'\n','Client: '||c.name,'Email: '||c.email,'Phone: '||c.phone,
+      'Service: '||c.service,'Description: '||c.description,'Invoice number: pending'),
+    c.id,c.charge_date,coalesce(c.service_amount,0),coalesce(nullif(c.currency,''),'USD'),''
+  from public.clients c
+  where (p_owner is null or c.user_id=p_owner)
+    and lower(c.billing_frequency) in ('monthly','biweekly','once a month')
+    and coalesce(c.status,'Active') not in ('Lost','Past','Paused')
+    and c.charge_date <= (now() at time zone 'UTC')::date + 1
+  on conflict(user_id,billing_client_id,billing_due_date) where billing_client_id is not null
+  do nothing;
+  get diagnostics inserted = row_count;
+  return inserted;
+end;
+$$;
+revoke all on function public.orbit_create_billing_reminders(uuid) from public,anon,authenticated;
+grant execute on function public.orbit_create_billing_reminders(uuid) to service_role;
+
+-- Enable pg_cron in Supabase Database > Extensions for reminders while the app
+-- is closed. Rerunning this file updates the same job instead of duplicating it.
+do $$
+begin
+  if exists(select 1 from pg_extension where extname='pg_cron') then
+    perform cron.schedule('orbit-client-billing-reminders','0 * * * *',
+      'select public.orbit_create_billing_reminders();');
+  else
+    raise notice 'Enable pg_cron and rerun for background reminders. The app also checks on opening and every minute.';
+  end if;
+end;
+$$;
+select public.orbit_create_billing_reminders();

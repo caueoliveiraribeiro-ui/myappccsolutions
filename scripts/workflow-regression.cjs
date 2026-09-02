@@ -38,6 +38,32 @@ async function main() {
   assert.ok(overviewSource.indexOf('title="Investment market value"') < overviewSource.indexOf(">Last month result<"));
   const payment={received_at:now.toISOString().slice(0,10),amount:250,currency:"USD"};
   assert.equal(monthSeries(1,[],[],[],[],[],Number,String,"en",[payment])[0].income,250);
+  const month=now.toISOString().slice(0,7);
+  const finances=monthSeries(1,[{amount:40,expense_date:month+"-02"}],[],[],[],
+    [{actual_cost:25,month}],Number,String,"en",[payment])[0];
+  assert.equal(finances.expenses,40,"Groceries must not be included in expenses");
+  assert.equal(finances.groceries,25);
+  assert.equal(finances.net,185,"Net income = paid projects - groceries - expenses");
+  const jsx={jsx:(type,props)=>({type,props}),jsxs:(type,props)=>({type,props})};
+  const {Pipeline}=load("components/operations-dashboard.tsx",{
+    react:{useState:value=>[value,()=>{}]},
+    "react/jsx-runtime":jsx,
+    "@/components/currency-conversion":{useCurrencyRates:()=>Number}
+  },"\nexport {Pipeline};");
+  const leads=Array.from({length:350},(_,i)=>({id:String(i),status:"Lost",company:"Lead "+i}));
+  leads.push({id:"archived",status:"New",company:"Archived",archived:true});
+  const tree=Pipeline({items:leads,edit:()=>{},delLead:()=>{}});
+  const nodes=[];
+  function walk(node){if(!node)return;if(Array.isArray(node)){node.forEach(walk);return}
+    if(typeof node==="object"){nodes.push(node);walk(node.props?.children)}}
+  walk(tree);
+  assert.equal(nodes.filter(node=>node.type==="details").length,300);
+  assert.ok(nodes.some(node=>node.props?.value==="0 / 300"),"Archived leads excluded from active total");
+  const sql=fs.readFileSync("supabase/orbit-workflow-update.sql","utf8");
+  assert.ok(sql.includes("tasks_billing_occurrence_unique"));
+  assert.ok(sql.includes("on conflict(user_id,billing_client_id,billing_due_date)"));
+  assert.ok(sql.includes("from public,anon,authenticated"),"Reminder RPC is not public");
+  assert.ok(investmentSource.includes('>')&&investmentSource.includes('sellAll(g)'));
   let state, effects=[];
   const pending=[];
   const hooks={
