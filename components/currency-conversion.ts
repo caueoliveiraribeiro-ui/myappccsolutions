@@ -37,3 +37,29 @@ export function useCurrencyRates(rows: Row[], targetCurrency: string) {
   }
 }
 
+export function useHoldingQuotes(holdings: Row[], targetCurrency: string, country = "US") {
+  const [quotes, setQuotes] = useState<Record<string, number>>({})
+  const key = [...new Set(holdings.map(row => `${row.asset_type}:${String(row.symbol || "").toUpperCase()}`).filter(value => !value.endsWith(":")))].sort().join(",")
+
+  useEffect(() => {
+    const assets = key ? key.split(",") : []
+    if (!assets.length) {
+      setQuotes({})
+      return
+    }
+    Promise.all(assets.map(async asset => {
+      const [assetType, symbol] = asset.split(":")
+      try {
+        const response = await fetch(`/api/market-price?type=${assetType.toLowerCase()}&symbol=${encodeURIComponent(symbol)}&currency=${encodeURIComponent(targetCurrency)}&country=${encodeURIComponent(country)}`)
+        const data = await response.json().catch(() => ({}))
+        if (!response.ok || !Number.isFinite(Number(data.price))) throw new Error()
+        return [asset, Number(data.price)] as const
+      } catch {
+        return [asset, Number.NaN] as const
+      }
+    })).then(entries => setQuotes(Object.fromEntries(entries)))
+  }, [key, targetCurrency, country])
+
+  return quotes
+}
+
