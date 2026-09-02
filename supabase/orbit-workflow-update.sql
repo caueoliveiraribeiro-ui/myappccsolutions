@@ -5,6 +5,12 @@ alter table if exists public.projects add column if not exists description text 
 alter table if exists public.projects add column if not exists cost numeric default 0;
 alter table if exists public.projects add column if not exists source_lead_id uuid;
 alter table if exists public.projects add column if not exists currency text;
+alter table if exists public.projects add column if not exists contact_email text default '';
+alter table if exists public.projects add column if not exists contact_phone text default '';
+alter table if exists public.projects add column if not exists payment_date date;
+alter table if exists public.projects add column if not exists payment_method text default '';
+alter table if exists public.projects add column if not exists payment_reference text default '';
+alter table if exists public.projects add column if not exists payment_notes text default '';
 
 alter table if exists public.clients add column if not exists description text default '';
 alter table if exists public.clients add column if not exists last_call_date date;
@@ -19,6 +25,9 @@ alter table if exists public.leads add column if not exists description text def
 alter table if exists public.leads add column if not exists last_call_date date;
 alter table if exists public.leads add column if not exists directory_hidden boolean default false;
 alter table if exists public.leads add column if not exists currency text;
+alter table if exists public.leads add column if not exists next_follow_up_date date;
+
+alter table if exists public.tasks add column if not exists start_time time;
 
 alter table if exists public.expenses add column if not exists subcategory text default '';
 alter table if exists public.expenses add column if not exists notes text default '';
@@ -65,4 +74,30 @@ create unique index if not exists clients_user_source_lead_unique
 create unique index if not exists projects_user_source_lead_unique
   on public.projects (user_id, source_lead_id)
   where source_lead_id is not null;
+
+-- Payment records live independently from projects, clients and leads. This
+-- intentionally has no foreign key so received payments survive record cleanup.
+create table if not exists public.payment_records (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null,
+  source_project_id uuid,
+  project_name text not null default '',
+  client_name text default '',
+  amount numeric default 0,
+  currency text default 'USD',
+  received_at date default current_date,
+  method text default 'Other',
+  reference text default '',
+  notes text default '',
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+create index if not exists payment_records_user_id_idx
+  on public.payment_records (user_id);
+
+create unique index if not exists payment_records_user_source_project_unique
+  on public.payment_records (user_id, source_project_id)
+  where source_project_id is not null;
+
 
