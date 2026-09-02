@@ -138,10 +138,13 @@ select { min-height: 2.5rem; width: 100%; border-radius: .5rem; border: 1px soli
 @keyframes chip-breathe { 0%,100% { transform:translateY(0); border-color:rgba(255,255,255,.1); } 50% { transform:translateY(-3px); border-color:rgba(34,211,238,.28); } }
 .brand-magnifier { z-index: 5; filter: drop-shadow(0 0 10px rgba(103,232,249,.6)); animation: brand-sweep 5.8s cubic-bezier(.45,0,.25,1) infinite; pointer-events: none; }
 .brand-scan::after { content:""; position:absolute; inset:-12px -20px; background:linear-gradient(105deg,transparent 35%,rgba(103,232,249,.1) 49%,transparent 63%); background-size:220% 100%; animation:brand-sweep 5.8s cubic-bezier(.45,0,.25,1) infinite; pointer-events:none; }
-.login-orb { position:absolute; width:220px; height:220px; border-radius:999px; background:rgba(34,211,238,.055); filter:blur(24px); animation:login-float 7s ease-in-out infinite; }
-.animation-delay-2 { animation-delay:-3.5s; background:rgba(139,92,246,.06); }
+.login-orb { position:absolute; width:270px; height:270px; border-radius:999px; background:rgba(34,211,238,.13); filter:blur(28px); animation:login-float 6s ease-in-out infinite; }
+.animation-delay-2 { animation-delay:-3.5s; background:rgba(139,92,246,.14); }
 .login-shell { animation:shell-drift 8s ease-in-out infinite; transform-style:preserve-3d; }
-.login-aurora { animation:aurora-drift 11s ease-in-out infinite; }
+.login-aurora { animation:aurora-drift 8s ease-in-out infinite; filter:saturate(1.4) brightness(1.18); }
+.brand-scan > .flex > .grid { width:92px!important; height:92px!important; box-shadow:0 0 55px rgba(34,211,238,.52)!important; }
+.brand-scan > .flex > .grid svg { width:42px; height:42px; }
+aside > .mb-4:first-child { display:none; }
 .login-grid { opacity:.16; background-image:linear-gradient(rgba(103,232,249,.08) 1px,transparent 1px),linear-gradient(90deg,rgba(103,232,249,.08) 1px,transparent 1px); background-size:64px 64px; mask-image:radial-gradient(circle at 50% 50%,black,transparent 75%); }
 .feature-chip { animation:chip-breathe 4s ease-in-out infinite; }
 .feature-chip svg { color:#67e8f9; filter:drop-shadow(0 0 7px rgba(34,211,238,.9)); stroke-width:2.2; }
