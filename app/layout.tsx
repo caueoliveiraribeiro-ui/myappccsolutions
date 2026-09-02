@@ -11,8 +11,8 @@ const figtree = Figtree({
 })
 
 export const metadata: Metadata = {
-  title: "Orbit CRM — Global Growth OS",
-  description: "Secure CRM for worldwide lead discovery, creative sales and investment tracking.",
+  title: "Orbit LM — Life Management",
+  description: "A secure operating system for clients, work, money, investments and everyday life.",
 }
 
 export default function RootLayout({
