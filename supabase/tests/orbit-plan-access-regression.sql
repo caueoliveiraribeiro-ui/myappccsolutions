@@ -31,7 +31,10 @@ BEGIN
  blocked:=false;
  BEGIN UPDATE public.leads SET status='New' WHERE id=record_id;EXCEPTION WHEN OTHERS THEN IF SQLERRM NOT LIKE '%ORBIT_QUOTA_leads%' THEN RAISE;END IF;blocked:=true;END;
  IF NOT blocked THEN RAISE EXCEPTION 'History restoration quota failed';END IF;
- INSERT INTO public.clients(user_id,name,email) SELECT big_id,'Big client '||i,'big'||i||'@example.invalid' FROM generate_series(1,51) i;
+ INSERT INTO public.clients(user_id,name,email) SELECT big_id,'Big client '||i,'big'||i||'@example.invalid' FROM generate_series(1,100) i;
+ blocked:=false;
+ BEGIN INSERT INTO public.clients(user_id,name) VALUES(big_id,'Overflow');EXCEPTION WHEN OTHERS THEN IF SQLERRM NOT LIKE '%ORBIT_QUOTA_clients%' THEN RAISE;END IF;blocked:=true;END;
+ IF NOT blocked THEN RAISE EXCEPTION 'Big client quota failed';END IF;
  INSERT INTO public.leads(user_id,company,status) SELECT big_id,'Big lead '||i,'New' FROM generate_series(1,300) i;
  INSERT INTO public.leads(user_id,company,archived) SELECT big_id,'Big archive '||i,true FROM generate_series(1,100) i;
  blocked:=false;
@@ -50,4 +53,3 @@ BEGIN
 END $test$;
 ROLLBACK;
 SELECT jsonb_build_object('tests','PASS: client/import/live/archive/restore/expired quotas; all test rows rolled back','owner_assignments',(SELECT count(*) FROM public.account_subscriptions WHERE plan='owner' AND status='active'),'subscription_rls',(SELECT relrowsecurity FROM pg_class WHERE oid='public.account_subscriptions'::regclass),'anon_can_write',has_table_privilege('anon','public.account_subscriptions','INSERT'),'authenticated_can_write',has_table_privilege('authenticated','public.account_subscriptions','UPDATE')) AS audit;
-

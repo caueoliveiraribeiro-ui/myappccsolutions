@@ -48,11 +48,12 @@ async function main() {
   const {Pipeline}=load("components/operations-dashboard.tsx",{
     react:{useState:value=>[value,()=>{}]},
     "react/jsx-runtime":jsx,
+    "@/lib/plan-features":load("lib/plan-features.ts"),
     "@/components/currency-conversion":{useCurrencyRates:()=>Number}
   },"\nexport {Pipeline};");
   const leads=Array.from({length:350},(_,i)=>({id:String(i),status:"Lost",company:"Lead "+i}));
   leads.push({id:"archived",status:"New",company:"Archived",archived:true});
-  const tree=Pipeline({items:leads,edit:()=>{},delLead:()=>{}});
+  const tree=Pipeline({plan:"big_business",items:leads,edit:()=>{},delLead:()=>{}});
   const nodes=[];
   function walk(node){if(!node)return;if(Array.isArray(node)){node.forEach(walk);return}
     if(typeof node==="object"){nodes.push(node);walk(node.props?.children)}}
@@ -95,4 +96,3 @@ async function main() {
   console.log("PASS: 12-month mixed-currency purchases, sales history, independent payment income, stale FX responses and optional fields.");
 }
 main().catch(error=>{console.error(error);process.exitCode=1});
-

@@ -29,8 +29,8 @@ BEGIN
  WHERE user_id=new.user_id AND status='active' AND access_until>now();
  IF p IS NULL OR p NOT IN ('small_business','big_business') THEN RAISE EXCEPTION 'ORBIT_PLAN_REQUIRED'; END IF;
  IF TG_TABLE_NAME='clients' THEN
-   IF p='big_business' OR TG_OP='UPDATE' THEN RETURN new; END IF;
-   cap:=50;
+   IF TG_OP='UPDATE' THEN RETURN new; END IF;
+   cap:=CASE WHEN p='big_business' THEN 100 ELSE 50 END;
    SELECT count(*) INTO total FROM public.clients WHERE user_id=new.user_id AND id<>new.id;
  ELSE
    bucket:=CASE WHEN coalesce(new.archived,false) THEN 'archive' WHEN coalesce(new.status,'New') NOT IN ('Client','Won','Lost') THEN 'live' ELSE 'history' END;

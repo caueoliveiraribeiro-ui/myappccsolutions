@@ -42,7 +42,7 @@ const plans = [
     eyebrow: "Turn momentum into growth",
     icon: Zap,
     description: "Connect your personal system to the work, clients and projects moving your business forward.",
-    features: ["Everything in Personal", "Crypto", "History", "Reports", "Lead management", "100 live leads", "50 archived leads", "Up to 50 clients"],
+    features: ["Everything in Personal", "Crypto", "History", "Reports", "Lead management", "Sales pipeline", "100 live leads", "50 archived leads", "Up to 50 clients"],
     accent: "violet",
     featured: true,
   },
@@ -53,7 +53,7 @@ const plans = [
     eyebrow: "Operate at full scale",
     icon: TrendingUp,
     description: "A complete growth workspace for teams ready to find, nurture and convert more opportunities.",
-    features: ["All Small Business features, with higher limits", "Tasks & follow-ups", "Sales pipeline", "300 live leads", "100 archived leads", "Unlimited clients"],
+    features: ["All Small Business features, with higher limits", "Tasks & follow-ups", "Sales pipeline", "300 live leads", "100 archived leads", "Up to 100 clients"],
     accent: "blue",
     featured: false,
   },
@@ -63,6 +63,9 @@ export function LoginForm() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+  const [signup,setSignup]=useState(false)
+  const [notice,setNotice]=useState("")
+  useEffect(()=>{if(new URLSearchParams(window.location.search).get("verified")==="1")setNotice("Email verified. You can sign in to your new Orbit account.")},[])
 
   const [pricing, setPricing] = useState({currency:"USD",rate:1,date:"",fallback:false})
   const [requestedCurrency, setRequestedCurrency] = useState("")
@@ -87,19 +90,17 @@ export function LoginForm() {
     setLoading(true)
     setError("")
     const form = new FormData(event.currentTarget)
-    const response = await fetch("/api/auth/login", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: form.get("name"), email: form.get("email"), password: form.get("password") }),
-    })
-    const data = await response.json()
-    if (!response.ok) {
-      setError(data.error || "We could not complete this request. Please check your details and try again.")
-      setLoading(false)
-      return
-    }
-    router.replace("/dashboard")
-    router.refresh()
+    try {
+      const response=await fetch(signup?"/api/auth/signup":"/api/auth/login",{
+        method:"POST",headers:{"content-type":"application/json"},
+        body:JSON.stringify({name:form.get("name"),email:form.get("email"),password:form.get("password"),website:form.get("website")})
+      })
+      const data=await response.json()
+      if(!response.ok)throw Error(data.error||"We could not complete this request. Please try again.")
+      if(signup){setNotice(data.message);return}
+      router.replace("/dashboard");router.refresh()
+    }catch(error){setError(error instanceof Error?error.message:"Connection interrupted. Please try again.")}
+    finally{setLoading(false)}
   }
 
   const openAccess = () => {
@@ -155,15 +156,17 @@ export function LoginForm() {
           <section className="flex min-h-[600px] items-center p-7 sm:p-12">
             <form onSubmit={submit} className="w-full">
               <div className="mb-8 flex items-center gap-3 lg:hidden"><div className="grid h-14 w-14 place-items-center rounded-[20px] bg-cyan-300 text-slate-950"><Sparkles size={27}/></div><div><b className="text-2xl">Orbit LM</b><p className="text-xs text-cyan-200/60">Life Management</p></div></div>
-              <p className="text-sm text-cyan-300">Welcome back</p>
-              <h2 className="mt-2 text-3xl font-semibold">Sign in</h2>
-              <p className="mt-2 text-sm text-slate-500">Step back into your command center.</p>
+              <p className="text-sm text-cyan-300">{signup?"Your next chapter starts here":"Welcome back"}</p>
+              <h2 className="mt-2 text-3xl font-semibold">{signup?"Create your account":"Sign in"}</h2>
+              <p className="mt-2 text-sm text-slate-500">{signup?"Verify your email, then choose the plan that fits your ambitions.":"Step back into your command center."}</p>
               <div className="mt-8 space-y-4">
+                {signup&&<><label className="block text-sm text-slate-300">Your name<Input required name="name" maxLength={80} autoComplete="name" className="mt-2 h-12"/></label><div className="hidden" aria-hidden="true"><Input name="website" tabIndex={-1} autoComplete="off"/></div></>}
+                {notice&&<p role="status" className="rounded-xl border border-cyan-300/30 bg-cyan-300/10 p-3 text-sm text-cyan-100">{notice}</p>}
                 <label className="block text-sm text-slate-300">Email<Input required name="email" type="email" className="mt-2 h-12" autoComplete="username"/></label>
-                <label className="block text-sm text-slate-300">Password<Input required name="password" type="password" minLength={1} className="mt-2 h-12" autoComplete="current-password"/></label>
+                <label className="block text-sm text-slate-300">Password<Input required name="password" type="password" minLength={signup?12:1} maxLength={signup?128:undefined} className="mt-2 h-12" autoComplete={signup?"new-password":"current-password"}/></label>
                 {error && <div className="rounded-xl border border-red-400/20 bg-red-400/10 p-3 text-sm text-red-200">{error}</div>}
-                <Button disabled={loading} className="h-12 w-full bg-cyan-300 text-slate-950 shadow-[0_0_28px_rgba(34,211,238,.2)]">{loading ? "Please wait…" : "Enter my Orbit"}</Button>
-                <p className="text-center text-sm text-slate-400">New registrations are currently closed. Existing members can sign in above.</p>
+                <Button disabled={loading} className="h-12 w-full bg-cyan-300 text-slate-950 shadow-[0_0_28px_rgba(34,211,238,.2)]">{loading ? "Please wait…" : signup?"Send verification email":"Enter my Orbit"}</Button>
+                {signup&&<p className="text-xs text-slate-400">Use at least 12 characters. Registration does not activate a paid plan.</p>}<button type="button" disabled={loading} className="w-full py-2 text-center text-sm text-cyan-200" onClick={()=>{setSignup(v=>!v);setNotice("");setError("")}}>{signup?"Already have an account? Sign in":"New here? Create your account"}</button>
               </div>
             </form>
           </section>
@@ -181,7 +184,7 @@ export function LoginForm() {
         <div className="mt-8 text-center">
           <label className="text-sm text-cyan-100">Display currency <select aria-label="Plan currency" value={requestedCurrency} onChange={e=>setRequestedCurrency(e.target.value)} className="ml-2 min-h-11 rounded-xl border border-cyan-300/30 bg-[#101827] px-3"><option value="">Your local currency</option>{planCurrencies.map(c=><option key={c} value={c}>{c}</option>)}</select></label>
           <p role="status" className="mt-3 text-xs text-slate-400">{pricingBusy ? "Updating local prices…" : pricing.fallback ? "Local conversion is temporarily unavailable. Prices shown in USD." : pricing.currency==="USD" ? "Monthly prices in USD." : `Approximate monthly prices in ${pricing.currency} · exchange rate dated ${pricing.date || "latest available"}.`}</p>
-          <p className="mt-2 text-xs text-slate-500">USD base prices. Local equivalents are estimates. Checkout is coming soon; new registrations are currently closed.</p>
+          <p className="mt-2 text-xs text-slate-500">USD base prices. Local equivalents are estimates. Checkout is coming soon; create an account to get started.</p>
         </div>
         <div className="mt-16 grid gap-6 lg:grid-cols-3">
           {plans.map((plan, index) => {
