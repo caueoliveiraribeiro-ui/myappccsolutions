@@ -12,7 +12,11 @@ export async function paddleApi(path:string,body?:unknown){
     headers:{Authorization:"Bearer "+process.env.PADDLE_API_KEY,"Content-Type":"application/json","Paddle-Version":"1"},
     ...(body===undefined?{}:{body:JSON.stringify(body)}),cache:"no-store",signal:AbortSignal.timeout(12000)
   })
-  if(!r.ok)throw Error("PADDLE_REQUEST_FAILED")
+  if(!r.ok){
+    const detail=await r.text().catch(()=>"")
+    console.error("PADDLE_API_ERROR",path,r.status,detail)
+    throw Error("PADDLE_REQUEST_FAILED")
+  }
   return (await r.json()).data
 }
 // Verify the unmodified request body; reject old or future signatures and compare in constant time.
