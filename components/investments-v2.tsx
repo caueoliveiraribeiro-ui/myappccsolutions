@@ -23,7 +23,7 @@ function CurrencySale({symbol,currency,lots,editHolding}:R){
  finally{setSaving(false)}
  }}>
  <label className="block text-xs text-slate-400">Purchase to adjust<select required value={lotId} onChange={e=>{setLotId(e.target.value);setSold("")}} className="mt-1 w-full rounded bg-[#111827] p-2">
- <option value="">Choose a purchase</option>{available.map((item:R)=><option key={item.id} value={item.id}>{String(item.purchased_at||item.created_at||"").slice(0,10)} · {Number(item.remaining_quantity??item.quantity)} units · {currency} {item.buy_price} each · {String(item.id).slice(0,6)}</option>)}</select></label>
+ <option value="">Choose a purchase</option>{available.map((item:R)=><option key={item.id} value={item.id}>{String(item.purchased_at||item.created_at||"").slice(0,10)} · {Number(item.remaining_quantity??item.quantity)} units · {currency} {item.buy_price} per unit</option>)}</select></label>
  <label className="block text-xs text-slate-400">Quantity sold<Input required type="number" step="any" min="0" max={remaining} disabled={!lot||saving} value={sold} onChange={e=>setSold(e.target.value)}/></label>
  <p className="text-xs text-slate-500">{lot?`${remaining} units available in this purchase. Only this purchase will change.`:"Select the exact purchase in this currency."}</p>
  <Button type="submit" size="sm" disabled={!lot||saving}>{saving?"Saving…":"Save sale"}</Button>
