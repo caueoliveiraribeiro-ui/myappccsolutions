@@ -40,7 +40,7 @@ const plans = [
     eyebrow: "Turn momentum into growth",
     icon: Zap,
     description: "Connect your personal system to the work, clients and projects moving your business forward.",
-    features: ["Everything in Personal", "Crypto", "History", "Lead management", "100 live leads", "50 archived leads", "Up to 50 clients"],
+    features: ["Everything in Personal", "Crypto", "History", "Reports", "Lead management", "100 live leads", "50 archived leads", "Up to 50 clients"],
     accent: "violet",
     featured: true,
   },
