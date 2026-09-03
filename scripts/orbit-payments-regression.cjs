@@ -18,7 +18,7 @@ async function main(){
  const clients=load("lib/client-import.ts");
  const parsed=clients.parseClientCsv('Name,Email,Phone\r\n"Ana, Maria",ANA@example.com,+00123\r\nDuplicate,ana@example.com,0123');
  assert.equal(parsed.clients.length,1);assert.equal(parsed.clients[0].name,"Ana, Maria");assert.equal(parsed.clients[0].phone,"+00123");
- let called;const api=load("app/api/clients/import/route.ts",{"next/server":{NextResponse:{json:(body,options)=>({body,status:options?.status||200})}},"next/headers":{cookies:async()=>({get:()=>({value:"session"})})},"@/lib/auth":{getSession:async()=>({id:"owner"})},"@/lib/client-import":clients,"@/lib/supabase":{db:async(path,request)=>{called={path,...JSON.parse(request.body)};return [{}]}}});
+ let called;const api=load("app/api/clients/import/route.ts",{"@/lib/plan-access":{requestFeature:async()=>null,planWriteError:()=>null},"next/server":{NextResponse:{json:(body,options)=>({body,status:options?.status||200})}},"next/headers":{cookies:async()=>({get:()=>({value:"session"})})},"@/lib/auth":{getSession:async()=>({id:"owner"})},"@/lib/client-import":clients,"@/lib/supabase":{db:async(path,request)=>{called={path,...JSON.parse(request.body)};return [{}]}}});
  const result=await api.POST({text:async()=>JSON.stringify({clients:[{name:"Ana",email:"ana@example.com",phone:"+001",user_id:"someone-else",service_amount:999}]})});
  assert.equal(result.status,200);assert.equal(called.p_owner,"owner");assert.equal(Object.keys(called.p_clients[0]).length,3);assert.equal(called.path,"rpc/orbit_import_clients");
  let providerCalls=0;const provider=load("lib/alpha-market-data.ts",{"next/cache":{unstable_cache:fn=>fn},"node:crypto":require("node:crypto"),fetch:async()=>{providerCalls++;return{ok:true,status:200,headers:{get:()=>null},json:async()=>({"Global Quote":{"05. price":"10"}})}}});
@@ -30,4 +30,3 @@ async function main(){
  console.log("PASS: Orbit payment statuses, month/year totals, CSV import, owner isolation, provider caching, dropdowns and migration guards.");
 }
 main().catch(error=>{console.error(error);process.exitCode=1});
-

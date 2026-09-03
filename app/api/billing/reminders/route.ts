@@ -1,8 +1,10 @@
+import {accountAccess} from "@/lib/plan-access"
+import {requestFeature} from "@/lib/plan-access"
 import {NextResponse} from "next/server"
 import {cookies} from "next/headers"
 import {getSession} from "@/lib/auth"
 import {db} from "@/lib/supabase"
-export async function POST(){
+export async function POST(){const planDenied=await requestFeature("reports");if(planDenied)return planDenied;
  const token=(await cookies()).get("orbit_session")?.value;
  const user=token?await getSession(token):null;
  if(!user)return NextResponse.json({error:"Please sign in again."},{status:401});
@@ -10,8 +12,7 @@ export async function POST(){
    const owners=new Set<string>([user.id]);
    const memberships=await db(`workspace_members?member_user_id=eq.${user.id}&permission=eq.editor&select=owner_user_id`).catch(()=>[]);
    for(const membership of memberships)owners.add(membership.owner_user_id);
-   for(const owner of owners){await db("rpc/orbit_create_billing_reminders",{method:"POST",body:JSON.stringify({p_owner:owner})});await db("rpc/orbit_create_upcoming_payments",{method:"POST",body:JSON.stringify({p_owner:owner})});}
+   for(const owner of owners){if(!(await accountAccess(owner)).features.includes("reports"))continue;await db("rpc/orbit_create_billing_reminders",{method:"POST",body:JSON.stringify({p_owner:owner})});await db("rpc/orbit_create_upcoming_payments",{method:"POST",body:JSON.stringify({p_owner:owner})});}
    return NextResponse.json({ok:true});
  }catch{return NextResponse.json({error:"Run the latest billing SQL update, then refresh."},{status:503})}
 }
-

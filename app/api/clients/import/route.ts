@@ -1,9 +1,11 @@
+import {planWriteError} from "@/lib/plan-access"
+import {requestFeature} from "@/lib/plan-access"
 import {NextResponse} from "next/server"
 import {cookies} from "next/headers"
 import {getSession} from "@/lib/auth"
 import {db} from "@/lib/supabase"
 import {validateClientImport,ClientImportRow} from "@/lib/client-import"
-export async function POST(request:Request){
+export async function POST(request:Request){const planDenied=await requestFeature("clients");if(planDenied)return planDenied;
  const token=(await cookies()).get("orbit_session")?.value,user=token?await getSession(token):null
  if(!user)return NextResponse.json({error:"Please sign in again."},{status:401})
  try{
@@ -15,6 +17,5 @@ export async function POST(request:Request){
   if(clients.some(row=>!validateClientImport(row)))return NextResponse.json({error:"Check Name, Email and Phone on each row."},{status:400})
   const items=await db("rpc/orbit_import_clients",{method:"POST",body:JSON.stringify({p_owner:user.id,p_clients:clients})})
   return NextResponse.json({items,imported:items.length,skipped:clients.length-items.length})
- }catch{return NextResponse.json({error:"Import could not finish. Check the sheet and make sure the Orbit payments/import SQL update is installed."},{status:400})}
+ }catch(error){const denied=planWriteError(error);if(denied)return denied;return NextResponse.json({error:"Import could not finish. Check the sheet and make sure the Orbit payments/import SQL update is installed."},{status:400})}
 }
-

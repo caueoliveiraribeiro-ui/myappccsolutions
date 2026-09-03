@@ -1,0 +1,66 @@
+const fs=require("node:fs"),ts=require("typescript"),assert=require("node:assert/strict");
+function load(file,mocks={}){const m={exports:{}};new Function("require","module","exports",ts.transpileModule(fs.readFileSync(file,"utf8"),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText)(id=>Object.hasOwn(mocks,id)?mocks[id]:require(id),m,m.exports);return m.exports}
+const response={NextResponse:{json:(body,o)=>({body,status:o?.status||200})}};
+const features=load("lib/plan-features.ts");let subscription=[],offline=false,user={email:"owner@example.com",id:"11111111-1111-4111-8111-111111111111"},calls=[],handler=async()=>[];
+const headers={cookies:async()=>({get:()=>user?{value:"session"}:undefined})},auth={getSession:async()=>user};
+const database={hasDatabase:()=>true,db:async(path,init)=>{calls.push({path,init});if(path.startsWith("account_subscriptions")){if(offline)throw Error("offline");return subscription}return handler(path,init)}};
+const access=load("lib/plan-access.ts",{"@/lib/supabase":database,"@/lib/plan-features":features,"next/server":response,"next/headers":headers,"@/lib/auth":auth});
+const api=load("app/api/data/[resource]/route.ts",{"@/lib/supabase":database,"@/lib/plan-features":features,"@/lib/plan-access":access,"next/server":response,"next/headers":headers,"@/lib/auth":auth});
+const plan=p=>{subscription=[{plan:p,status:"active",access_until:new Date(Date.now()+86400000).toISOString()}];offline=false;calls=[];handler=async()=>[]};
+const ctx=resource=>({params:Promise.resolve({resource})}),request=body=>({json:async()=>body});
+async function main(){
+ for(const id of access.ownerAccountIds)assert.equal((await access.accountAccess(id)).plan,"owner");
+ assert.equal((await access.accountAccess(user.id)).plan,"none");
+ for(const p of ["personal","small_business","big_business"]){plan(p);assert.equal((await access.accountAccess(user.id)).plan,p)}
+ subscription[0].status="past_due";assert.equal((await access.accountAccess(user.id)).features.length,0);
+ subscription[0].status="active";subscription[0].access_until="2000-01-01";assert.equal((await access.accountAccess(user.id)).plan,"none");
+ offline=true;assert.equal((await access.accountAccess(user.id)).plan,"none");offline=false;
+ plan("personal");assert.equal((await api.GET({},ctx("clients"))).status,403);
+ assert.equal((await api.POST(request({asset_type:"Crypto",symbol:"BTC"}),ctx("holdings"))).status,403);
+ assert.equal((await api.POST(request({kind:"Task",title:"Bypass"}),ctx("tasks"))).status,403);
+ assert.equal((await api.POST(request({kind:"Focus",title:"Focus"}),ctx("tasks"))).status,200);
+ assert.equal((await api.POST(request({plan:"owner"}),ctx("account_subscriptions"))).status,404);
+ assert.equal((await api.POST(request({asset_type:"Wrong"}),ctx("holdings"))).status,400);
+ calls=[];await api.GET({},ctx("holdings"));assert.ok(calls.some(c=>c.path.includes("asset_type=eq.Stock")));
+ calls=[];await api.GET({},ctx("tasks"));assert.ok(calls.some(c=>c.path.includes("kind=eq.Focus")));
+ const id="22222222-2222-4222-8222-222222222222",owner="33333333-3333-4333-8333-333333333333";
+ handler=async(path,init)=>path.startsWith("workspace_members")?[]:init?[]:[{id,user_id:user.id,asset_type:"Crypto"}];
+ assert.equal((await api.PATCH(request({id,quantity:2}),ctx("holdings"))).status,403);
+ assert.equal((await api.DELETE(request({id}),ctx("holdings"))).status,403);
+ plan("small_business");
+ handler=async(path,init)=>path.startsWith("workspace_members")?[{owner_user_id:owner,permission:"viewer"}]:init?[]:[{id,user_id:owner,asset_type:"Stock"}];
+ assert.equal((await api.PATCH(request({id,quantity:2}),ctx("holdings"))).status,403);
+ assert.equal((await api.DELETE(request({id}),ctx("holdings"))).status,403);
+ handler=async(path,init)=>path.startsWith("workspace_members")?[]:init?[]:[{id,user_id:user.id,asset_type:"Crypto"}];
+ assert.equal((await api.PATCH(request({id,asset_type:"Stock"}),ctx("holdings"))).status,400);
+ plan("small_business");await api.POST(request({user_id:owner,name:"Client"}),ctx("clients"));assert.equal(JSON.parse(calls.find(c=>c.init?.method==="POST").init.body).user_id,user.id);
+ handler=async(path,init)=>{if(init)throw Error("ORBIT_QUOTA_clients: limit 50");return []};
+ assert.equal((await api.POST(request({name:"Over limit"}),ctx("clients"))).status,409);
+ plan("small_business");
+ handler=async(path,init)=>path.startsWith("workspace_members")?[]:path.startsWith("projects?")?[{id,user_id:user.id,source_client_id:owner}]:[];
+ assert.equal((await api.PATCH(request({id,name:"Preserve orphaned history"}),ctx("projects"))).status,200);
+ assert.equal((await api.PATCH(request({id,source_client_id:owner}),ctx("projects"))).status,400);
+ plan("personal");
+ const mocked={"next/server":response,"next/headers":headers,"@/lib/auth":auth,"@/lib/supabase":database,"@/lib/plan-access":access,"@/lib/client-import":load("lib/client-import.ts")};
+ const importer=load("app/api/clients/import/route.ts",mocked);
+ assert.equal((await importer.POST({text:async()=>{throw Error("Must not read forbidden payload")}})).status,403);
+ plan("small_business");handler=async()=>{throw Error("ORBIT_QUOTA_clients")};
+ assert.equal((await importer.POST({text:async()=>JSON.stringify({clients:[{name:"A",email:"a@example.com",phone:"123"}]})})).status,409);
+ plan("personal");const invite=load("app/api/collaboration/route.ts",mocked);
+ assert.equal((await invite.POST({url:"https://example.com",json:async()=>({email:"new@example.com"})})).status,403);
+ assert.ok(!calls.some(c=>c.init?.method==="POST")); // no invitation or membership written for new registration
+ plan("personal");
+ const summaryApi=load("app/api/overview/payments/route.ts",mocked);
+ const now=new Date().toISOString(),payloads=[{amount:10,currency:"USD",received_at:now,status:"Payment received",client_name:"Private"},{amount:20,currency:"USD",received_at:now,status:"Payment received"},{amount:90,currency:"USD",received_at:now,status:"Awaiting payment"}];
+ handler=async path=>path.startsWith("workspace_members")?[]:payloads;
+ const summary=await summaryApi.GET();assert.equal(summary.status,200);assert.equal(summary.body.items.length,1);assert.equal(summary.body.items[0].amount,30);assert.equal(summary.body.items[0].entry_count,2);assert.ok(!("client_name" in summary.body.items[0]));
+ subscription=[];assert.equal((await summaryApi.GET()).status,403);
+ user=null;assert.equal((await api.GET({},ctx("holdings"))).status,401);
+ assert.equal((await access.requestFeature("stocks")).status,401);
+ const protectedRoutes=["app/api/clients/import/route.ts","app/api/collaboration/route.ts","app/api/email/route.ts","app/api/google-leads/route.ts","app/api/market-search/route.ts","app/api/market-price/route.ts","app/api/fx/route.ts","app/api/billing/reminders/route.ts","app/api/calendar/connect/route.ts","app/api/calendar/callback/route.ts","app/api/calendar/events/route.ts","app/api/portfolios/[id]/route.ts"];
+ for(const file of protectedRoutes)assert.ok(fs.readFileSync(file,"utf8").includes("planDenied=await requestFeature"),file);
+ const dashboard=fs.readFileSync("components/operations-dashboard.tsx","utf8");
+ assert.ok(dashboard.includes('Upgrade your plan'));assert.ok(dashboard.includes('locked={'));assert.ok(dashboard.includes('me.access?.plan,me.access?.status'));
+ console.log("PASS: plans/expiry/fail-closed, both owner IDs, crypto isolation, Focus, denied direct CRUD, viewers, ownership spoofing, immutable asset types, imports, closed invitations, and UI locks.");
+}
+main().catch(e=>{console.error(e);process.exitCode=1});

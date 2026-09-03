@@ -19,7 +19,6 @@ export function overviewMonthTotals({leads=[],projects=[],payments=[],groceries=
     payments:received.reduce((sum,row)=>sum+convert(row.amount,row),0),
     groceries:groceries.filter(row=>same(row.month||row.created_at)).reduce((sum,row)=>sum+convert(row.actual_cost||row.estimated_cost||0,row),0),
     expenses:expenses.filter(row=>same(row.expense_date||row.created_at)).reduce((sum,row)=>sum+convert(row.amount,row),0),
-    waitingCount:waiting.length,paymentCount:received.length,leadCount:active.length,
+    waitingCount:waiting.length,paymentCount:received.reduce((sum,row)=>sum+Number(row.entry_count||1),0),leadCount:active.length,
   }
 }
-

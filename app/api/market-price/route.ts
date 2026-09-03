@@ -1,3 +1,4 @@
+import {requestFeature} from "@/lib/plan-access"
 import { NextResponse } from "next/server"
 import { cookies } from "next/headers"
 import { verifySession } from "@/lib/auth"
@@ -110,7 +111,7 @@ const cachedYahooStock=unstable_cache(yahooStock,["orbit-yahoo-stock-v1"],{reval
 const stockPending=new Map<string,Promise<Quote>>()
 async function sharedYahooStock(symbol:string){const existing=stockPending.get(symbol);if(existing)return existing;const pending=cachedYahooStock(symbol).finally(()=>stockPending.delete(symbol));stockPending.set(symbol,pending);return pending}
 
-export async function GET(request: Request) {
+export async function GET(request: Request) {const planDenied=await requestFeature(new URL(request.url).searchParams.get("type")==="crypto"?"crypto":"stocks");if(planDenied)return planDenied;
   if (!await authorized()) return NextResponse.json({ error: "Your session expired. Please sign in again." }, { status: 401 })
   const url = new URL(request.url)
   const type = url.searchParams.get("type")
@@ -150,4 +151,3 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "We could not load the price right now." }, { status: 502 })
   }
 }
-

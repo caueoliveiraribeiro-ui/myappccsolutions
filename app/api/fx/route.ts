@@ -1,10 +1,11 @@
+import {requestFeature} from "@/lib/plan-access"
 import { NextResponse } from "next/server"
 import { cookies } from "next/headers"
 import { verifySession } from "@/lib/auth"
 
 const supported = new Set(["USD", "BRL", "EUR", "GBP", "CAD", "AUD", "JPY", "KRW", "MXN", "CHF"])
 
-export async function GET(request: Request) {
+export async function GET(request: Request) {const planDenied=await requestFeature("overview");if(planDenied)return planDenied;
   const token = (await cookies()).get("orbit_session")?.value
   if (!token || !(await verifySession(token))) {
     return NextResponse.json({ error: "Your session expired. Please sign in again." }, { status: 401 })
@@ -29,4 +30,3 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Currency conversion is temporarily unavailable. Please try again shortly." }, { status: 502 })
   }
 }
-

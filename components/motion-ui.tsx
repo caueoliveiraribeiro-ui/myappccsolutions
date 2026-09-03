@@ -1,5 +1,6 @@
 "use client"
 import { AnimatePresence, motion, useReducedMotion } from "motion/react"
+import { Lock } from "lucide-react"
 import { Card } from "@/components/ui/card"
 
 type R = Record<string, any>
@@ -33,14 +34,14 @@ export function PageTransition({ children }: { children: React.ReactNode }) {
  * between items (layoutId) instead of each button toggling its own
  * background — one continuous piece of motion, not N independent ones.
  */
-export function NavItem({ active, icon: Icon, label, onClick }: R) {
+export function NavItem({ active, icon: Icon, label, onClick, locked = false }: R) {
   const reduce = useReducedMotion()
   return (
     <button
       type="button"
       aria-current={active ? "page" : undefined}
       aria-label={label}
-      title={label}
+      title={locked ? `${label} — Upgrade your plan` : label}
       onClick={onClick}
       className={
         "relative flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 " +
@@ -56,7 +57,7 @@ export function NavItem({ active, icon: Icon, label, onClick }: R) {
       )}
       <span className="relative z-10 flex items-center gap-3">
         <Icon size={16} />
-        <span className="nav-label">{label}</span>
+        <span className="nav-label">{label}</span>{locked && <Lock aria-label="Upgrade required" size={12} className="shrink-0 text-slate-500"/>}
       </span>
     </button>
   )
