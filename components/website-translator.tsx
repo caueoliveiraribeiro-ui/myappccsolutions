@@ -26,6 +26,44 @@ Object.assign(dictionaries.it,{"Client":"Cliente","Active leads":"Lead attivi","
 Object.assign(dictionaries.nl,{"Client":"Klant","Active leads":"Actieve leads","Estimated potential":"Geschat potentieel","Client history":"Klantgeschiedenis","Lost":"Verloren"})
 Object.assign(dictionaries.ja,{"Client":"顧客","Active leads":"アクティブなリード","Estimated potential":"見込み額","Client history":"顧客履歴","Lost":"失注"})
 Object.assign(dictionaries.ko,{"Client":"고객","Active leads":"활성 리드","Estimated potential":"예상 잠재 가치","Client history":"고객 기록","Lost":"실패"})
-const originals=new WeakMap<Node,string>(),placeholders=new WeakMap<HTMLInputElement|HTMLTextAreaElement,string>()
-export function WebsiteTranslator({language="en"}:{language?:string}){useEffect(()=>{const dictionary=dictionaries[language],translate=()=>{const root=document.querySelector(".wealth-dashboard");if(!root)return;const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);let node:Node|null;while((node=walker.nextNode())){if(!originals.has(node))originals.set(node,node.textContent||"");const original=originals.get(node)||"",key=original.trim(),value=dictionary?.[key],next=value?original.replace(key,value):original;if(node.textContent!==next)node.textContent=next}root.querySelectorAll<HTMLInputElement|HTMLTextAreaElement>("input[placeholder],textarea[placeholder]").forEach(el=>{if(!placeholders.has(el))placeholders.set(el,el.placeholder);const original=placeholders.get(el)||"",next=dictionary?.[original]||original;if(el.placeholder!==next)el.placeholder=next});document.documentElement.lang=language};translate();const observer=new MutationObserver(translate),root=document.querySelector(".wealth-dashboard");if(root)observer.observe(root,{childList:true,subtree:true});return()=>observer.disconnect()},[language]);return null}
+Object.assign(dictionaries.pt,{"Payment name":"Nome do pagamento","Client (optional)":"Cliente (opcional)","Amount received":"Valor recebido","Original currency":"Moeda original","Received date":"Data de recebimento","Method":"Método","Reference / invoice (optional)":"Referência / fatura (opcional)","Notes (optional)":"Notas (opcional)","+ Add payment":"+ Adicionar pagamento","Add payment":"Adicionar pagamento","Edit payment":"Editar pagamento","Delete payment":"Excluir pagamento","Save payment":"Salvar pagamento","Cancel":"Cancelar","Saving…":"Salvando…","Deleting…":"Excluindo…"})
+Object.assign(dictionaries.pt,{"Archive lead":"Arquivar lead","Delete lead":"Excluir lead"})
+Object.assign(dictionaries.pt,{"Payment status":"Status do pagamento","Payment date (received / expected)":"Data do pagamento (recebido / previsto)"})
+Object.assign(dictionaries.pt,{"Filter by status":"Filtrar por status","All statuses":"Todos os status","Payment month":"Mês do pagamento","Client name":"Nome do cliente","Search client name":"Pesquisar nome do cliente","Search payment name":"Pesquisar nome do pagamento","Payment date order":"Ordem por data de pagamento","Newest first":"Mais recentes primeiro","Oldest first":"Mais antigos primeiro","Clear filters":"Limpar filtros","No payments match these filters.":"Nenhum pagamento corresponde aos filtros.","Filters affect this list only. Month uses the received or expected payment date.":"Os filtros afetam apenas esta lista. O mês usa a data de recebimento ou a data prevista do pagamento."})
+Object.assign(dictionaries.pt,{"Total payments received":"Total de pagamentos recebidos","Past 12 calendar months · including this month":"Últimos 12 meses · incluindo este mês","Import Excel":"Importar Excel","Import clients":"Importar clientes","Confirm import":"Confirmar importação","Processing…":"Processando…","Importing…":"Importando…"})
+type TranslationState={source:string;rendered:string}
+const originals=new WeakMap<Node,TranslationState>(),placeholders=new WeakMap<HTMLInputElement|HTMLTextAreaElement,TranslationState>()
+export function translateUpdatedText(current:string,previous:TranslationState|undefined,dictionary?:D):TranslationState{
+  // React owns changing values. Only reuse a source when our own translation is still displayed.
+  const source=previous&&current===previous.rendered?previous.source:current
+  const key=source.trim(),value=dictionary?.[key]
+  return {source,rendered:value?source.replace(key,value):source}
+}
+export function WebsiteTranslator({language="en"}:{language?:string}){
+  useEffect(()=>{
+    const root=document.querySelector(".wealth-dashboard");if(!root)return
+    const dictionary=dictionaries[language]
+    const observer=new MutationObserver(translate)
+    function translate(){
+      observer.disconnect()
+      try{
+        const walker=document.createTreeWalker(root!,NodeFilter.SHOW_TEXT);let node:Node|null
+        while((node=walker.nextNode())){
+          const state=translateUpdatedText(node.textContent||"",originals.get(node),dictionary)
+          originals.set(node,state)
+          if(node.textContent!==state.rendered)node.textContent=state.rendered
+        }
+        root!.querySelectorAll<HTMLInputElement|HTMLTextAreaElement>("input[placeholder],textarea[placeholder]").forEach(el=>{
+          const state=translateUpdatedText(el.placeholder,placeholders.get(el),dictionary)
+          placeholders.set(el,state)
+          if(el.placeholder!==state.rendered)el.placeholder=state.rendered
+        })
+        document.documentElement.lang=language
+      }finally{observer.observe(root!,{childList:true,characterData:true,subtree:true,attributes:true,attributeFilter:["placeholder"]})}
+    }
+    translate()
+    return()=>observer.disconnect()
+  },[language])
+  return null
+}
 

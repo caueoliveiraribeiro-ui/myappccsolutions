@@ -6,7 +6,7 @@ function load(file, mocks = {}, extra = "") {
   const source = fs.readFileSync(file, "utf8") + extra;
   const code = ts.transpileModule(source, {compilerOptions:{target:ts.ScriptTarget.ES2020,module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText;
   const exports = {};
-  vm.runInNewContext(code, {exports, require:name=>mocks[name]||{}, console, Date, Intl, Set, fetch:(...args)=>mocks.fetch(...args)});
+  vm.runInNewContext(code, {exports, require:name=>mocks[name]||(name.includes("payment-status")?load("components/payment-status.ts"):{}), console, Date, Intl, Set, fetch:(...args)=>mocks.fetch(...args)});
   return exports;
 }
 async function main() {
@@ -95,3 +95,4 @@ async function main() {
   console.log("PASS: 12-month mixed-currency purchases, sales history, independent payment income, stale FX responses and optional fields.");
 }
 main().catch(error=>{console.error(error);process.exitCode=1});
+

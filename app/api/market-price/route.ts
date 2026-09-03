@@ -2,7 +2,11 @@ import { NextResponse } from "next/server"
 import { cookies } from "next/headers"
 import { verifySession } from "@/lib/auth"
 
+import {alphaMarketData,MarketProviderError} from "@/lib/alpha-market-data"
+import {unstable_cache} from "next/cache"
+
 type Quote = {
+  asOf?: string
   symbol: string
   name: string
   price: number
@@ -78,16 +82,12 @@ async function yahooStock(symbol: string): Promise<Quote> {
 async function alphaStock(symbol: string): Promise<Quote> {
   const key = process.env.ALPHA_VANTAGE_API_KEY
   if (!key) throw Error("Live stock prices are not connected.")
-  const response = await fetch(`https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${encodeURIComponent(symbol)}&apikey=${key}`, { cache: "no-store" })
-  const data = await response.json()
+  const data = await alphaMarketData("GLOBAL_QUOTE",symbol)
   const quote = data["Global Quote"]
-  if (!quote?.["05. price"]) {
-    if (data.Note || data.Information) throw Error("The stock provider is busy.")
-    throw Error("Ticker not found")
-  }
   return {
     symbol,
     name: symbol,
+    asOf: data.fetchedAt,
     price: Number(quote["05. price"]),
     change24h: Number(String(quote["10. change percent"] || "0").replace("%", "")),
     currency: stockCurrency(symbol),
@@ -105,6 +105,10 @@ async function cryptoQuote(symbol: string): Promise<Quote> {
   if (!data[id]?.usd) throw Error("Crypto not found. You can still record any symbol manually by entering its purchase price.")
   return { symbol, name: id, price: Number(data[id].usd), change24h: Number(data[id].usd_24h_change || 0), currency: "USD", source: "CoinGecko" }
 }
+
+const cachedYahooStock=unstable_cache(yahooStock,["orbit-yahoo-stock-v1"],{revalidate:900})
+const stockPending=new Map<string,Promise<Quote>>()
+async function sharedYahooStock(symbol:string){const existing=stockPending.get(symbol);if(existing)return existing;const pending=cachedYahooStock(symbol).finally(()=>stockPending.delete(symbol));stockPending.set(symbol,pending);return pending}
 
 export async function GET(request: Request) {
   if (!await authorized()) return NextResponse.json({ error: "Your session expired. Please sign in again." }, { status: 401 })
@@ -124,11 +128,12 @@ export async function GET(request: Request) {
     let base: Quote
     if (type === "stock") {
       try {
-        base = await yahooStock(symbol)
+        base = await sharedYahooStock(symbol)
       } catch {
         try {
           base = await alphaStock(symbol)
-        } catch {
+        } catch (error) {
+          if(error instanceof MarketProviderError) throw error
           return NextResponse.json({ error: "We could not find this stock, ETF or fund right now. Check the ticker and market suffix, or enter the purchase price manually." }, { status: 404 })
         }
       }
@@ -141,8 +146,8 @@ export async function GET(request: Request) {
     quotes.set(cacheKey, { until: Date.now() + (type === "stock" ? 300000 : 60000), data: result })
     return NextResponse.json(result)
   } catch (error) {
+    if(error instanceof MarketProviderError)return NextResponse.json({error:error.message},{status:error.status,headers:error.retryAfter?{"Retry-After":String(error.retryAfter)}:undefined})
     return NextResponse.json({ error: error instanceof Error ? error.message : "We could not load the price right now." }, { status: 502 })
   }
 }
-
 
