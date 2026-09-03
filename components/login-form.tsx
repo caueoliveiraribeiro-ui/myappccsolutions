@@ -176,7 +176,7 @@ export function LoginForm() {
         </div>
 
         <div className="mt-8 text-center">
-          <label className="text-sm text-cyan-100">Display currency <select aria-label="Plan currency" value={requestedCurrency} onChange={e=>setRequestedCurrency(e.target.value)} className="ml-2 min-h-11 rounded-xl border border-cyan-300/30 bg-[#101827] px-3"><option value="">Automatic · your location</option>{planCurrencies.map(c=><option key={c} value={c}>{c}</option>)}</select></label>
+          <label className="text-sm text-cyan-100">Display currency <select aria-label="Plan currency" value={requestedCurrency} onChange={e=>setRequestedCurrency(e.target.value)} className="ml-2 min-h-11 rounded-xl border border-cyan-300/30 bg-[#101827] px-3"><option value="">Your local currency</option>{planCurrencies.map(c=><option key={c} value={c}>{c}</option>)}</select></label>
           <p role="status" className="mt-3 text-xs text-slate-400">{pricingBusy ? "Updating local prices…" : pricing.fallback ? "Local conversion is temporarily unavailable. Prices shown in USD." : pricing.currency==="USD" ? "Monthly prices in USD." : `Approximate monthly prices in ${pricing.currency} · exchange rate dated ${pricing.date || "latest available"}.`}</p>
           <p className="mt-2 text-xs text-slate-500">USD base prices. Local equivalents are estimates; no checkout or plan restrictions are enabled yet.</p>
         </div>
