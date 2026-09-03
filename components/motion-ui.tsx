@@ -39,6 +39,8 @@ export function NavItem({ active, icon: Icon, label, onClick }: R) {
     <button
       type="button"
       aria-current={active ? "page" : undefined}
+      aria-label={label}
+      title={label}
       onClick={onClick}
       className={
         "relative flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 " +
@@ -54,7 +56,7 @@ export function NavItem({ active, icon: Icon, label, onClick }: R) {
       )}
       <span className="relative z-10 flex items-center gap-3">
         <Icon size={16} />
-        {label}
+        <span className="nav-label">{label}</span>
       </span>
     </button>
   )
@@ -113,4 +115,3 @@ export function Metric({ title, value, sub, icon, I, babyBlue = false, neonOrang
     </Card>
   )
 }
-

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -9,6 +9,8 @@ import {
   FolderKanban, Search, ShieldCheck, ShoppingBasket, Sparkles, Target,
   TrendingUp, Users, WalletCards, Zap,
 } from "lucide-react"
+
+import { planCurrencies, priceInCurrency } from "@/lib/plan-pricing"
 
 const featureCards = [
   [Contact, "Client studio", "Relationships in one place"],
@@ -22,28 +24,31 @@ const featureCards = [
 const plans = [
   {
     name: "Personal",
+    usd: 19.99,
     eyebrow: "Build your foundation",
     icon: Target,
     description: "A beautiful command center for your money, investments and everyday life.",
-    features: ["Overview dashboard", "Stocks", "Crypto", "Expenses", "Groceries", "Calendar"],
+    features: ["Overview dashboard", "Stocks", "Expenses", "Groceries", "Calendar"],
     accent: "cyan",
     featured: false,
   },
   {
     name: "Small Business",
+    usd: 49.99,
     eyebrow: "Turn momentum into growth",
     icon: Zap,
     description: "Connect your personal system to the work, clients and projects moving your business forward.",
-    features: ["Everything in Personal", "Projects", "Tasks & follow-ups", "History", "Client directory"],
+    features: ["Everything in Personal", "Crypto", "Projects", "History", "Lead management", "100 live leads", "50 archived leads", "Up to 50 clients"],
     accent: "violet",
     featured: true,
   },
   {
     name: "Big Business",
+    usd: 99.99,
     eyebrow: "Operate at full scale",
     icon: TrendingUp,
     description: "A complete growth workspace for teams ready to find, nurture and convert more opportunities.",
-    features: ["Everything in Personal", "Everything in Small Business", "Lead management", "Sales pipeline"],
+    features: ["All Small Business features, with higher limits", "Tasks & follow-ups", "Sales pipeline", "300 live leads", "100 archived leads", "Unlimited clients"],
     accent: "blue",
     featured: false,
   },
@@ -54,6 +59,23 @@ export function LoginForm() {
   const [signup, setSignup] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+
+  const [pricing, setPricing] = useState({currency:"USD",rate:1,date:"",fallback:false})
+  const [requestedCurrency, setRequestedCurrency] = useState("")
+  const [pricingBusy, setPricingBusy] = useState(true)
+  const [locale, setLocale] = useState("en-US")
+  useEffect(() => { setLocale(navigator.language || "en-US") }, [])
+  useEffect(() => {
+    const controller = new AbortController()
+    setPricingBusy(true)
+    fetch("/api/plan-pricing" + (requestedCurrency ? "?currency=" + requestedCurrency : ""), {signal:controller.signal})
+      .then(r => { if (!r.ok) throw new Error(); return r.json() })
+      .then(d => { if (!controller.signal.aborted) setPricing(d) })
+      .catch(() => { if (!controller.signal.aborted) setPricing({currency:"USD",rate:1,date:"",fallback:true}) })
+      .finally(() => { if (!controller.signal.aborted) setPricingBusy(false) })
+    return () => controller.abort()
+  }, [requestedCurrency])
+  const formatPrice = (usd: number) => new Intl.NumberFormat(locale, {style:"currency",currency:pricing.currency}).format(priceInCurrency(usd,pricing.rate))
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -82,14 +104,14 @@ export function LoginForm() {
   }
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#050812] text-white">
+    <main className="orbit-home relative min-h-screen overflow-hidden bg-[#050812] text-white">
       <div className="orbit-art fixed inset-[-6%]" />
       <div className="login-aurora fixed inset-[-8%] bg-[radial-gradient(circle_at_16%_0%,rgba(34,211,238,.32),transparent_36%),radial-gradient(circle_at_84%_100%,rgba(139,92,246,.24),transparent_38%)]" />
       <div className="login-grid fixed inset-0" />
       <div className="login-orb fixed left-[8%] top-[18%]" />
       <div className="login-orb animation-delay-2 fixed bottom-[12%] right-[7%]" />
 
-      <nav className="relative z-20 mx-auto flex max-w-7xl items-center justify-between px-6 py-6">
+      <nav className="relative z-20 mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-6 py-6">
         <a href="#access" className="flex items-center gap-3">
           <span className="grid h-12 w-12 place-items-center rounded-2xl bg-cyan-300 text-slate-950 shadow-[0_0_30px_rgba(34,211,238,.4)]"><Sparkles size={24}/></span>
           <span><b className="block text-lg">Orbit LM</b><small className="text-cyan-200/60">Life Management</small></span>
@@ -153,21 +175,27 @@ export function LoginForm() {
           <p className="mx-auto mt-6 max-w-2xl text-base leading-7 text-slate-400">Start with clarity. Expand into your business. Scale into a complete growth engine—all inside the same thoughtful workspace.</p>
         </div>
 
+        <div className="mt-8 text-center">
+          <label className="text-sm text-cyan-100">Display currency <select aria-label="Plan currency" value={requestedCurrency} onChange={e=>setRequestedCurrency(e.target.value)} className="ml-2 min-h-11 rounded-xl border border-cyan-300/30 bg-[#101827] px-3"><option value="">Automatic · your location</option>{planCurrencies.map(c=><option key={c} value={c}>{c}</option>)}</select></label>
+          <p role="status" className="mt-3 text-xs text-slate-400">{pricingBusy ? "Updating local prices…" : pricing.fallback ? "Local conversion is temporarily unavailable. Prices shown in USD." : pricing.currency==="USD" ? "Monthly prices in USD." : `Approximate monthly prices in ${pricing.currency} · exchange rate dated ${pricing.date || "latest available"}.`}</p>
+          <p className="mt-2 text-xs text-slate-500">USD base prices. Local equivalents are estimates; no checkout or plan restrictions are enabled yet.</p>
+        </div>
         <div className="mt-16 grid gap-6 lg:grid-cols-3">
           {plans.map((plan, index) => {
             const Icon = plan.icon
             return (
-              <article key={plan.name} className={`pricing-card relative overflow-hidden rounded-[30px] border p-7 backdrop-blur-xl ${plan.featured ? "border-violet-300/40 bg-violet-300/[.09] lg:-translate-y-5" : "border-cyan-300/20 bg-white/[.045]"}`} style={{animationDelay:`${index * .5}s`}}>
+              <article key={plan.name} className={`pricing-card relative overflow-hidden rounded-[30px] border p-7 text-center backdrop-blur-xl ${plan.featured ? "border-violet-300/40 bg-violet-300/[.09] lg:-translate-y-5" : "border-cyan-300/20 bg-white/[.045]"}`} style={{animationDelay:`${index * .5}s`}}>
                 <div className="pricing-glow absolute -right-16 -top-16 h-44 w-44 rounded-full bg-cyan-300/15 blur-3xl"/>
                 {plan.featured && <span className="absolute right-5 top-5 rounded-full border border-violet-200/25 bg-violet-300/15 px-3 py-1 text-[10px] uppercase tracking-[.2em] text-violet-100">Most versatile</span>}
                 <div className="relative">
-                  <div className="grid h-14 w-14 place-items-center rounded-2xl border border-white/10 bg-gradient-to-br from-cyan-300/20 to-violet-300/20 text-cyan-200"><Icon size={25}/></div>
+                  <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl border border-white/10 bg-gradient-to-br from-cyan-300/20 to-violet-300/20 text-cyan-200"><Icon size={25}/></div>
                   <p className="mt-7 text-xs uppercase tracking-[.22em] text-cyan-200/60">{plan.eyebrow}</p>
                   <h3 className="mt-2 text-3xl font-semibold">{plan.name}</h3>
+                  <p className="mt-4 text-3xl font-semibold text-cyan-100">{pricingBusy ? "…" : formatPrice(plan.usd)}<span className="ml-1 text-sm font-normal text-slate-400">/ month</span></p>
                   <p className="mt-4 min-h-20 text-sm leading-6 text-slate-400">{plan.description}</p>
                   <div className="my-7 h-px bg-gradient-to-r from-cyan-300/30 via-white/10 to-transparent"/>
                   <ul className="space-y-3">
-                    {plan.features.map(feature => <li key={feature} className="flex items-center gap-3 text-sm text-slate-200"><span className="grid h-6 w-6 place-items-center rounded-full bg-cyan-300/10 text-cyan-300"><Check size={14}/></span>{feature}</li>)}
+                    {plan.features.map(feature => <li key={feature} className="flex items-center justify-center gap-3 text-sm text-slate-200"><span className="grid h-6 w-6 place-items-center rounded-full bg-cyan-300/10 text-cyan-300"><Check size={14}/></span>{feature}</li>)}
                   </ul>
                   <Button onClick={openSignup} className={`mt-8 h-12 w-full ${plan.featured ? "bg-gradient-to-r from-cyan-300 to-violet-300 text-slate-950" : "border border-cyan-300/25 bg-cyan-300/10 text-cyan-100 hover:bg-cyan-300/20"}`}>Choose your direction</Button>
                 </div>
@@ -178,12 +206,11 @@ export function LoginForm() {
 
         <div className="pricing-cta mt-16 overflow-hidden rounded-[34px] border border-cyan-300/25 bg-gradient-to-r from-cyan-300/[.12] via-blue-400/[.08] to-violet-400/[.14] p-8 text-center sm:p-12">
           <div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-cyan-300 text-slate-950 shadow-[0_0_45px_rgba(34,211,238,.4)]"><WalletCards size={28}/></div>
-          <h3 className="mt-6 text-3xl font-semibold sm:text-4xl">Your next chapter needs one clear place to begin.</h3>
-          <p className="mx-auto mt-4 max-w-2xl text-slate-400">No prices and no plan restrictions yet. Explore the complete Orbit LM experience while we build the membership system.</p>
-          <Button onClick={openSignup} className="mt-7 h-12 bg-cyan-300 px-8 text-slate-950">Create my Orbit</Button>
+          <h3 className="mt-6 text-3xl font-semibold sm:text-4xl">Your business is unique. Your Orbit can be too.</h3>
+          <p className="mx-auto mt-4 max-w-2xl text-slate-400">Imagine your brand, your workflows, and your team—connected in one workspace built around the way you do business. Let’s create your custom Orbit.</p>
+          <p className="mt-7 text-lg font-semibold text-cyan-200">Your brand. Your workflows. Your Orbit.</p>
         </div>
       </section>
     </main>
   )
 }
-
