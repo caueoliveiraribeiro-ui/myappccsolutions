@@ -37,6 +37,7 @@ export async function POST(req:Request){
     await db("orbit_paddle_checkouts?id=eq."+intent.id,{method:"PATCH",body:JSON.stringify({transaction_id:txn.id})})
     return NextResponse.json({transactionId:txn.id})
   }catch(e){
+    console.error("CHECKOUT_FAILED:", e)
     const busy=String(e).includes("ORBIT_CHECKOUT_BUSY"),existing=String(e).includes("ORBIT_SUBSCRIPTION_EXISTS")
     return NextResponse.json({error:existing?"You already have a subscription. Manage it before starting another.":busy?"A checkout is already being prepared. Please wait a moment and retry.":"Checkout could not be prepared. Please try again later; do not submit another payment if you already paid."},{status:existing||busy?409:503})
   }
