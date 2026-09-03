@@ -25,23 +25,22 @@ export function filterLedgerPayments(payments:Row[],projects:Row[],filters:Ledge
     return filters.order==="oldest"?left.localeCompare(right):right.localeCompare(left)
   })
 }
-export function paymentPayload(form:FormData){
+export function paymentPayload(form:FormData,payment?:Row){
   const data=Object.fromEntries(form),amount=Number(data.amount),currency=String(data.currency||"").trim().toUpperCase()
-  if(!String(data.project_name||"").trim())throw Error("Please enter a payment name.")
   if(!String(data.amount||"").trim()||!Number.isFinite(amount)||amount<=0)throw Error("Please enter an amount greater than zero.")
   if(!currencies.includes(currency))throw Error("Please choose the original payment currency.")
   if(!/^\d{4}-\d{2}-\d{2}$/.test(String(data.received_at||"")))throw Error("Please choose the received or expected payment date.")
   if(!paymentStatuses.includes(String(data.status||"Payment received") as any))throw Error("Please choose a valid payment status.")
-  return {...data,status:String(data.status||"Payment received"),project_name:String(data.project_name).trim(),amount,currency}
+  return {...data,status:String(data.status||"Payment received"),project_name:String(data.project_name??payment?.project_name??"Payment").trim()||"Payment",amount,currency}
 }
 function PaymentForm({payment,currency,onSave,onCancel}:{payment?:Row;currency:string;onSave:(data:Row)=>Promise<any>;onCancel:()=>void}){
   const [busy,setBusy]=useState(false),[error,setError]=useState("")
   const today=new Date(),date=String(payment?.received_at||`${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,"0")}-${String(today.getDate()).padStart(2,"0")}`).slice(0,10)
   return <form className="grid gap-3 border-t border-white/10 p-4 sm:grid-cols-2" onSubmit={async event=>{
     event.preventDefault();if(busy)return;setError("")
-    try{const data=paymentPayload(new FormData(event.currentTarget));setBusy(true);const saved=await onSave(data);if(saved===false){setError("Could not save this payment. Please try again.");return}toast.success(payment?"Payment updated":"Payment added");onCancel()}catch(error){setError(error instanceof Error?error.message:"Could not save this payment.")}finally{setBusy(false)}
+    try{const data=paymentPayload(new FormData(event.currentTarget),payment);setBusy(true);const saved=await onSave(data);if(saved===false){setError("Could not save this payment. Please try again.");return}toast.success(payment?"Payment updated":"Payment added");onCancel()}catch(error){setError(error instanceof Error?error.message:"Could not save this payment.")}finally{setBusy(false)}
   }}>
-    <label className="text-xs text-slate-400">Payment status<select name="status" defaultValue={payment?.status||"Payment received"} className={inputClass}>{paymentStatuses.map(status=><option key={status} value={status}>{status}</option>)}</select></label><label className="text-xs text-slate-400">Payment name<Input name="project_name" required defaultValue={payment?.project_name||""} placeholder="Service, invoice or payment description"/></label>
+    <label className="text-xs text-slate-400">Payment status<select name="status" defaultValue={payment?.status||"Payment received"} className={inputClass}>{paymentStatuses.map(status=><option key={status} value={status}>{status}</option>)}</select></label>
     <label className="text-xs text-slate-400">Client (optional)<Input name="client_name" defaultValue={payment?.client_name||""}/></label>
     <label className="text-xs text-slate-400">Payment amount<Input name="amount" type="number" min="0.00000001" step="any" required defaultValue={payment?.amount??""}/></label>
     <label className="text-xs text-slate-400">Original currency<select name="currency" required defaultValue={payment?payment.currency||"":currency} className={inputClass}><option value="" disabled>Select currency</option>{currencies.map(code=><option key={code} value={code}>{code}</option>)}</select></label>
