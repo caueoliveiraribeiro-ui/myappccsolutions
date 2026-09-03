@@ -59,7 +59,7 @@ const plans = [
   },
 ] as const
 
-export function LoginForm() {
+export function LoginForm({returnTo="/dashboard"}:{returnTo?:string}) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
@@ -98,7 +98,7 @@ export function LoginForm() {
       const data=await response.json()
       if(!response.ok)throw Error(data.error||"We could not complete this request. Please try again.")
       if(signup){setNotice(data.message);return}
-      router.replace("/dashboard");router.refresh()
+      router.replace(/^\/subscribe\?plan=(personal|small_business|big_business)$/.test(returnTo)?returnTo:"/dashboard");router.refresh()
     }catch(error){setError(error instanceof Error?error.message:"Connection interrupted. Please try again.")}
     finally{setLoading(false)}
   }

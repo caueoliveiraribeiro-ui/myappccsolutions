@@ -21,8 +21,9 @@ export function SubscriptionSettings({me}:{me:Record<string,any>}){
   <h2 className="text-lg font-semibold">Your Orbit plan</h2><p className="mt-2 text-cyan-200">{names[access.plan]||"Checking access…"} · {access.status||"Checking"}</p>
   {access.accessUntil&&<p className="mt-1 text-sm text-slate-400">Access valid until {new Date(access.accessUntil).toLocaleString()}</p>}
   <div className="my-4 grid gap-3 sm:grid-cols-3">{([["activeLeads","Active leads"],["archivedLeads","Archived leads"],["clients","Clients"]] as const).map(([key,label])=><div key={key} className="rounded-xl border border-cyan-300/15 bg-black/20 p-3"><p className="text-sm text-slate-400">{label}</p><b>{me.usage?.[key]??"—"} / {limits[key]===null?"Unlimited":limits[key]}</b></div>)}</div>
-  <p className="text-xs text-slate-400">Limits apply to records owned by your workspace. Existing records are kept when plans change. Paid access currently requires an administrator assignment.</p>
+  <p className="text-xs text-slate-400">Limits apply to records owned by your workspace. Existing records are kept when plans change. Subscription access activates after verified payment.</p>
   <Button asChild className="mt-4 bg-cyan-300 text-slate-950"><a href={PRICING_LINK}>Explore plans</a></Button>
+  {access.plan!=="owner"&&<Button asChild variant="outline" className="mt-4 ml-3"><a href="/billing">Manage billing</a></Button>}
   {access.plan==="owner"&&<details className="mt-6 rounded-xl border border-violet-300/25 p-4"><summary className="cursor-pointer font-semibold text-violet-200">Owner controls · Assign account access</summary>
    <p className="my-3 text-sm text-slate-400">Find a verified account, choose its plan and set an access end date. This does not charge the customer or connect Paddle.</p>
    <form onSubmit={lookup} className="flex flex-wrap gap-2"><Input aria-label="Member email" type="email" required value={email} onChange={e=>{setEmail(e.target.value);setAccount(null)}} placeholder="Member email" className="min-w-0 flex-1"/><Button disabled={busy}>Find account</Button></form>
