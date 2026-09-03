@@ -227,3 +227,7 @@ input[data-orbit-date="true"]::-webkit-calendar-picker-indicator { pointer-event
 .orbit-sidebar-controls { width:100%; align-items:center; }
 @media(min-width:1024px){.orbit-sidebar[data-collapsed="true"] .orbit-sidebar-controls{justify-content:center}.orbit-sidebar[data-collapsed="true"] nav>div{width:100%;margin-inline:auto}}
 input[type="month"],input[type="datetime-local"] { cursor:pointer; background-color:#103754; border-color:rgba(103,232,249,.4); color:#e6faff; }
+/* Match the minimize control to the logo/profile pill geometry. */
+.orbit-sidebar-controls > button:first-child { width:100%; height:68px; border-radius:1rem; background:rgba(103,232,249,.055); }
+.orbit-sidebar nav > div:first-child, .orbit-sidebar nav > div:nth-child(2) { min-height:68px; }
+
