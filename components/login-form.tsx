@@ -21,21 +21,23 @@ const featureCards = [
   [CalendarDays, "Life calendar", "Make space for what matters"],
 ] as const
 
+const SHOW_LOGIN_PLANS = false
+const LANDING_PLANS_URL = "https://orbit-landing-page-rose.vercel.app/#plans"
 const plans = [
   {
     name: "Personal",
-    usd: 19.99,
+    usd: 29.99,
     referenceUsd: 39.99,
     eyebrow: "Build your foundation",
     icon: Target,
     description: "A beautiful command center for your money, investments and everyday life.",
-    features: ["Overview dashboard", "Stocks", "Expenses", "Groceries", "Calendar", "Projects"],
+    features: ["Overview dashboard", "Stocks", "Expenses", "Groceries", "Calendar", "Projects", "Subscription management"],
     accent: "cyan",
     featured: false,
   },
   {
     name: "Small Business",
-    usd: 79.99,
+    usd: 99.99,
     referenceUsd: 149.99,
     eyebrow: "Turn momentum into growth",
     icon: Zap,
@@ -46,7 +48,7 @@ const plans = [
   },
   {
     name: "Big Business",
-    usd: 149.99,
+    usd: 189.99,
     referenceUsd: 299.99,
     eyebrow: "Operate at full scale",
     icon: TrendingUp,
@@ -68,6 +70,7 @@ export function LoginForm() {
   const [locale, setLocale] = useState("en-US")
   useEffect(() => { setLocale(navigator.language || "en-US") }, [])
   useEffect(() => {
+    if (!SHOW_LOGIN_PLANS) return
     const controller = new AbortController()
     setPricingBusy(true)
     fetch("/api/plan-pricing" + (requestedCurrency ? "?currency=" + requestedCurrency : ""), {signal:controller.signal})
@@ -118,7 +121,7 @@ export function LoginForm() {
           <span><b className="block text-lg">Orbit LM</b><small className="text-cyan-200/60">Life Management</small></span>
         </a>
         <div className="flex items-center gap-2">
-          <Button variant="ghost" asChild><a href="#plans">Explore plans</a></Button>
+          <Button variant="ghost" asChild><a href={LANDING_PLANS_URL}>Explore plans</a></Button>
           <Button className="bg-cyan-300 text-slate-950" onClick={openAccess}>Sign in</Button>
         </div>
       </nav>
@@ -165,10 +168,10 @@ export function LoginForm() {
             </form>
           </section>
         </div>
-        <a href="#plans" className="mt-10 flex flex-col items-center gap-2 text-xs uppercase tracking-[.28em] text-cyan-200/60">Discover your plan<ChevronDown className="pricing-bounce" size={19}/></a>
+        <a href={LANDING_PLANS_URL} className="mt-10 flex flex-col items-center gap-2 text-xs uppercase tracking-[.28em] text-cyan-200/60">Discover your plan<ChevronDown className="pricing-bounce" size={19}/></a>
       </section>
 
-      <section id="plans" className="relative z-10 mx-auto max-w-7xl px-5 py-28">
+      <section hidden={!SHOW_LOGIN_PLANS} id="plans" className="relative z-10 mx-auto max-w-7xl px-5 py-28">
         <div className="mx-auto max-w-3xl text-center">
           <div className="mx-auto mb-5 w-fit rounded-full border border-violet-300/20 bg-violet-300/10 px-4 py-2 text-xs uppercase tracking-[.25em] text-violet-200">One life. One operating system.</div>
           <h2 className="text-4xl font-semibold tracking-[-.04em] sm:text-6xl">Choose the Orbit that<br/><span className="bg-gradient-to-r from-cyan-200 via-blue-300 to-violet-300 bg-clip-text text-transparent">moves you forward.</span></h2>
@@ -221,4 +224,3 @@ export function LoginForm() {
     </main>
   )
 }
-

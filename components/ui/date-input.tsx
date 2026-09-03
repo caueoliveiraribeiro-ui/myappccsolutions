@@ -1,0 +1,14 @@
+"use client"
+import * as React from "react"
+import {format,parseISO,isValid} from "date-fns"
+import {Calendar} from "@/components/ui/calendar"
+import {Popover,PopoverAnchor,PopoverContent} from "@/components/ui/popover"
+type Props=React.ComponentProps<"input">
+export function DateInput({ref:forwardedRef,onClick,onKeyDown,onChange,className,...props}:Props){
+ const input=React.useRef<HTMLInputElement>(null);const [open,setOpen]=React.useState(false);const [selected,setSelected]=React.useState<Date>();
+ React.useImperativeHandle(forwardedRef,()=>input.current!,[])
+ function show(){if(props.disabled||props.readOnly)return;const value=input.current?.value;const date=value?parseISO(value):undefined;setSelected(date&&isValid(date)?date:undefined);setOpen(true)}
+ function choose(date:Date|undefined){const element=input.current;if(!element)return;const value=date?format(date,"yyyy-MM-dd"):"";Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,"value")?.set?.call(element,value);onChange?.({target:element,currentTarget:element,type:"change",bubbles:true,cancelable:false,defaultPrevented:false,isDefaultPrevented:()=>false,isPropagationStopped:()=>false,persist:()=>{},preventDefault:()=>{},stopPropagation:()=>{},nativeEvent:new Event("change"),timeStamp:Date.now(),eventPhase:2,isTrusted:false} as React.ChangeEvent<HTMLInputElement>);setSelected(date);setOpen(false)}
+ const min=typeof props.min==="string"&&props.min?parseISO(props.min):undefined,max=typeof props.max==="string"&&props.max?parseISO(props.max):undefined
+ return <Popover open={open} onOpenChange={setOpen}><PopoverAnchor asChild><input {...props} ref={input} type="date" data-slot="input" data-orbit-date="true" className={className} aria-haspopup="dialog" aria-expanded={open} onChange={onChange} onClick={event=>{onClick?.(event);if(!event.defaultPrevented){event.preventDefault();show()}}} onKeyDown={event=>{onKeyDown?.(event);if(!event.defaultPrevented&&(event.key===" "||(event.altKey&&event.key==="ArrowDown"))){event.preventDefault();show()}}}/></PopoverAnchor><PopoverContent className="orbit-date-popover w-auto border-cyan-300/40 bg-[#0c3554] p-0 text-white shadow-[0_0_35px_#22d3ee25]" align="start" onCloseAutoFocus={event=>{event.preventDefault();input.current?.focus()}}><Calendar mode="single" selected={selected} defaultMonth={selected} onSelect={choose} disabled={date=>Boolean((min&&isValid(min)&&date<min)||(max&&isValid(max)&&date>max))} className="orbit-date-calendar text-white" autoFocus/><div className="flex justify-between border-t border-cyan-200/20 px-3 py-2"><button type="button" className="text-xs text-cyan-100" disabled={props.required} onClick={()=>choose(undefined)}>Clear</button><button type="button" className="text-xs text-cyan-100" onClick={()=>setOpen(false)}>Close</button></div></PopoverContent></Popover>
+}

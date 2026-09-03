@@ -217,3 +217,13 @@ aside > .mb-4:first-child { display:none; }
 @keyframes offer-arrive { from { opacity: .4; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 @media (hover:hover) { .pricing-card:hover .plan-offer { border-color: #67e8f980; box-shadow: inset 0 0 24px #22d3ee10, 0 0 24px #22d3ee20; } }
 @media (prefers-reduced-motion:reduce) { .offer-amount, .plan-offer::after { animation: none; } .plan-offer { transition: none; } }
+/* Shared date controls retain native form values; the calendar uses Orbit blue. */
+input[data-orbit-date="true"] { cursor:pointer; background-color:#103754; border-color:rgba(103,232,249,.4); color:#e6faff; }
+input[data-orbit-date="true"]::-webkit-calendar-picker-indicator { pointer-events:none; }
+.orbit-date-popover .orbit-date-calendar { background:#0c3554; }
+.orbit-date-calendar [data-selected-single="true"] { background:#67e8f9; color:#082438; }
+.orbit-date-calendar button:hover { background:#175176; color:white; }
+.orbit-date-calendar .text-muted-foreground { color:#b5d8e7; }
+.orbit-sidebar-controls { width:100%; align-items:center; }
+@media(min-width:1024px){.orbit-sidebar[data-collapsed="true"] .orbit-sidebar-controls{justify-content:center}.orbit-sidebar[data-collapsed="true"] nav>div{width:100%;margin-inline:auto}}
+input[type="month"],input[type="datetime-local"] { cursor:pointer; background-color:#103754; border-color:rgba(103,232,249,.4); color:#e6faff; }
