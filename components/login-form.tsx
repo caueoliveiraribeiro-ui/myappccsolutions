@@ -59,7 +59,6 @@ const plans = [
 
 export function LoginForm() {
   const router = useRouter()
-  const [signup, setSignup] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
 
@@ -85,7 +84,7 @@ export function LoginForm() {
     setLoading(true)
     setError("")
     const form = new FormData(event.currentTarget)
-    const response = await fetch(signup ? "/api/auth/signup" : "/api/auth/login", {
+    const response = await fetch("/api/auth/login", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ name: form.get("name"), email: form.get("email"), password: form.get("password") }),
@@ -100,8 +99,7 @@ export function LoginForm() {
     router.refresh()
   }
 
-  const openSignup = () => {
-    setSignup(true)
+  const openAccess = () => {
     setError("")
     document.getElementById("access")?.scrollIntoView({ behavior: "smooth" })
   }
@@ -121,7 +119,7 @@ export function LoginForm() {
         </a>
         <div className="flex items-center gap-2">
           <Button variant="ghost" asChild><a href="#plans">Explore plans</a></Button>
-          <Button className="bg-cyan-300 text-slate-950" onClick={openSignup}>Start your Orbit</Button>
+          <Button className="bg-cyan-300 text-slate-950" onClick={openAccess}>Sign in</Button>
         </div>
       </nav>
 
@@ -141,7 +139,7 @@ export function LoginForm() {
               <p className="mt-5 max-w-md text-base leading-7 text-slate-400">One private command center for the work you’re building, the money you’re growing, and the life you’re living.</p>
               <div className="mt-7 grid max-w-lg grid-cols-2 gap-3">
                 {featureCards.map(([Icon, name, description], index) => (
-                  <button type="button" onClick={openSignup} key={name} className="feature-chip group flex min-h-20 items-center gap-3 rounded-2xl border border-cyan-300/15 bg-white/[.045] p-3 text-left" style={{animationDelay:`${index * .35}s`}}>
+                  <button type="button" onClick={openAccess} key={name} className="feature-chip group flex min-h-20 items-center gap-3 rounded-2xl border border-cyan-300/15 bg-white/[.045] p-3 text-left" style={{animationDelay:`${index * .35}s`}}>
                     <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-cyan-300/10"><Icon size={19} className="text-cyan-300"/></span>
                     <span><b className="block text-sm text-slate-100">{name}</b><small className="mt-0.5 block text-[10px] leading-4 text-slate-500">{description}</small></span>
                   </button>
@@ -154,16 +152,15 @@ export function LoginForm() {
           <section className="flex min-h-[600px] items-center p-7 sm:p-12">
             <form onSubmit={submit} className="w-full">
               <div className="mb-8 flex items-center gap-3 lg:hidden"><div className="grid h-14 w-14 place-items-center rounded-[20px] bg-cyan-300 text-slate-950"><Sparkles size={27}/></div><div><b className="text-2xl">Orbit LM</b><p className="text-xs text-cyan-200/60">Life Management</p></div></div>
-              <p className="text-sm text-cyan-300">{signup ? "Create your private Orbit" : "Welcome back"}</p>
-              <h2 className="mt-2 text-3xl font-semibold">{signup ? "Create account" : "Sign in"}</h2>
-              <p className="mt-2 text-sm text-slate-500">{signup ? "A private space designed around your goals." : "Step back into your command center."}</p>
+              <p className="text-sm text-cyan-300">Welcome back</p>
+              <h2 className="mt-2 text-3xl font-semibold">Sign in</h2>
+              <p className="mt-2 text-sm text-slate-500">Step back into your command center.</p>
               <div className="mt-8 space-y-4">
-                {signup && <label className="block text-sm text-slate-300">Name<Input required name="name" className="mt-2 h-12" autoComplete="name"/></label>}
                 <label className="block text-sm text-slate-300">Email<Input required name="email" type="email" className="mt-2 h-12" autoComplete="username"/></label>
-                <label className="block text-sm text-slate-300">Password<Input required name="password" type="password" minLength={signup ? 12 : 1} className="mt-2 h-12" autoComplete={signup ? "new-password" : "current-password"}/></label>
+                <label className="block text-sm text-slate-300">Password<Input required name="password" type="password" minLength={1} className="mt-2 h-12" autoComplete="current-password"/></label>
                 {error && <div className="rounded-xl border border-red-400/20 bg-red-400/10 p-3 text-sm text-red-200">{error}</div>}
-                <Button disabled={loading} className="h-12 w-full bg-cyan-300 text-slate-950 shadow-[0_0_28px_rgba(34,211,238,.2)]">{loading ? "Please wait…" : signup ? "Create my Orbit" : "Enter my Orbit"}</Button>
-                <Button type="button" variant="ghost" className="w-full text-slate-400" onClick={() => { setSignup(!signup); setError("") }}>{signup ? "Already have an account? Sign in" : "New here? Create your account"}</Button>
+                <Button disabled={loading} className="h-12 w-full bg-cyan-300 text-slate-950 shadow-[0_0_28px_rgba(34,211,238,.2)]">{loading ? "Please wait…" : "Enter my Orbit"}</Button>
+                <p className="text-center text-sm text-slate-400">New registrations are currently closed. Existing members can sign in above.</p>
               </div>
             </form>
           </section>
@@ -207,7 +204,7 @@ export function LoginForm() {
                   <ul className="space-y-3">
                     {plan.features.map(feature => <li key={feature} className="flex items-center justify-center gap-3 text-sm text-slate-200"><span className="grid h-6 w-6 place-items-center rounded-full bg-cyan-300/10 text-cyan-300"><Check size={14}/></span>{feature}</li>)}
                   </ul>
-                  <Button onClick={openSignup} className={`mt-8 h-12 w-full ${plan.featured ? "bg-gradient-to-r from-cyan-300 to-violet-300 text-slate-950" : "border border-cyan-300/25 bg-cyan-300/10 text-cyan-100 hover:bg-cyan-300/20"}`}>Explore {plan.name}</Button>
+                  <Button onClick={openAccess} className={`mt-8 h-12 w-full ${plan.featured ? "bg-gradient-to-r from-cyan-300 to-violet-300 text-slate-950" : "border border-cyan-300/25 bg-cyan-300/10 text-cyan-100 hover:bg-cyan-300/20"}`}>Existing member? Sign in</Button>
                 </div>
               </article>
             )
