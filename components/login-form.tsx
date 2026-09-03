@@ -25,6 +25,7 @@ const plans = [
   {
     name: "Personal",
     usd: 19.99,
+    referenceUsd: 39.99,
     eyebrow: "Build your foundation",
     icon: Target,
     description: "A beautiful command center for your money, investments and everyday life.",
@@ -34,7 +35,8 @@ const plans = [
   },
   {
     name: "Small Business",
-    usd: 49.99,
+    usd: 79.99,
+    referenceUsd: 99.99,
     eyebrow: "Turn momentum into growth",
     icon: Zap,
     description: "Connect your personal system to the work, clients and projects moving your business forward.",
@@ -44,7 +46,8 @@ const plans = [
   },
   {
     name: "Big Business",
-    usd: 99.99,
+    usd: 149.99,
+    referenceUsd: 249.99,
     eyebrow: "Operate at full scale",
     icon: TrendingUp,
     description: "A complete growth workspace for teams ready to find, nurture and convert more opportunities.",
@@ -191,13 +194,20 @@ export function LoginForm() {
                   <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl border border-white/10 bg-gradient-to-br from-cyan-300/20 to-violet-300/20 text-cyan-200"><Icon size={25}/></div>
                   <p className="mt-7 text-xs uppercase tracking-[.22em] text-cyan-200/60">{plan.eyebrow}</p>
                   <h3 className="mt-2 text-3xl font-semibold">{plan.name}</h3>
-                  <p className="mt-4 text-3xl font-semibold text-cyan-100">{pricingBusy ? "…" : formatPrice(plan.usd)}<span className="ml-1 text-sm font-normal text-slate-400">/ month</span></p>
+                  <div className="plan-offer relative mt-6 overflow-hidden rounded-2xl border border-cyan-200/25 bg-cyan-300/[.07] px-3 py-5">
+                    <div className="relative z-10">
+                      <p className="text-sm text-slate-400">From <del className="decoration-slate-400/80">{pricingBusy ? "…" : formatPrice(plan.referenceUsd)}</del><span className="sr-only"> per month</span></p>
+                      <p key={pricing.currency} className="offer-amount mt-2 break-words text-4xl font-semibold tracking-tight text-cyan-100"><span className="sr-only">Now </span>{pricingBusy ? "…" : formatPrice(plan.usd)}<span className="ml-1 text-sm font-normal tracking-normal text-slate-400">/ month</span></p>
+                      <span className="mt-3 inline-flex rounded-full border border-emerald-300/30 bg-emerald-300/10 px-3 py-1 text-xs font-semibold text-emerald-200">Save {Math.round((1-plan.usd/plan.referenceUsd)*100)}%</span>
+                      <p className="mt-3 text-xs text-cyan-100/70">{pricingBusy ? "Updating your savings…" : `${formatPrice(plan.referenceUsd-plan.usd)} less per month`}</p>
+                    </div>
+                  </div>
                   <p className="mt-4 min-h-20 text-sm leading-6 text-slate-400">{plan.description}</p>
                   <div className="my-7 h-px bg-gradient-to-r from-cyan-300/30 via-white/10 to-transparent"/>
                   <ul className="space-y-3">
                     {plan.features.map(feature => <li key={feature} className="flex items-center justify-center gap-3 text-sm text-slate-200"><span className="grid h-6 w-6 place-items-center rounded-full bg-cyan-300/10 text-cyan-300"><Check size={14}/></span>{feature}</li>)}
                   </ul>
-                  <Button onClick={openSignup} className={`mt-8 h-12 w-full ${plan.featured ? "bg-gradient-to-r from-cyan-300 to-violet-300 text-slate-950" : "border border-cyan-300/25 bg-cyan-300/10 text-cyan-100 hover:bg-cyan-300/20"}`}>Choose your direction</Button>
+                  <Button onClick={openSignup} className={`mt-8 h-12 w-full ${plan.featured ? "bg-gradient-to-r from-cyan-300 to-violet-300 text-slate-950" : "border border-cyan-300/25 bg-cyan-300/10 text-cyan-100 hover:bg-cyan-300/20"}`}>Explore {plan.name}</Button>
                 </div>
               </article>
             )

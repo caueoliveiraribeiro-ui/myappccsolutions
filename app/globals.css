@@ -209,3 +209,11 @@ aside > .mb-4:first-child { display:none; }
 }
 .orbit-home select[aria-label="Plan currency"] { display: inline-block; width: min(100%, 300px); }
 .orbit-sidebar nav { scrollbar-width: thin; scrollbar-color: #164e63 transparent; }
+/* Pricing offer accents: no layout shifts or continuous flashing. */
+.plan-offer { box-shadow: inset 0 0 24px #22d3ee0b, 0 0 20px #22d3ee0a; transition: border-color .25s ease, box-shadow .25s ease; }
+.plan-offer::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(110deg, transparent 25%, #a5f3fc16 50%, transparent 75%); transform: translateX(-110%); animation: offer-sweep 1.3s ease-out .3s both; }
+.offer-amount { animation: offer-arrive .4s ease-out both; }
+@keyframes offer-sweep { to { transform: translateX(110%); } }
+@keyframes offer-arrive { from { opacity: .4; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+@media (hover:hover) { .pricing-card:hover .plan-offer { border-color: #67e8f980; box-shadow: inset 0 0 24px #22d3ee10, 0 0 24px #22d3ee20; } }
+@media (prefers-reduced-motion:reduce) { .offer-amount, .plan-offer::after { animation: none; } .plan-offer { transition: none; } }
