@@ -36,7 +36,7 @@ const plans = [
   {
     name: "Small Business",
     usd: 79.99,
-    referenceUsd: 99.99,
+    referenceUsd: 149.99,
     eyebrow: "Turn momentum into growth",
     icon: Zap,
     description: "Connect your personal system to the work, clients and projects moving your business forward.",
@@ -47,7 +47,7 @@ const plans = [
   {
     name: "Big Business",
     usd: 149.99,
-    referenceUsd: 249.99,
+    referenceUsd: 299.99,
     eyebrow: "Operate at full scale",
     icon: TrendingUp,
     description: "A complete growth workspace for teams ready to find, nurture and convert more opportunities.",
