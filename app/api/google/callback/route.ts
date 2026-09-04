@@ -87,7 +87,7 @@ export async function GET(request: NextRequest) {
 
     if (!code || !state || !signedContext) {
       return NextResponse.redirect(
-        new URL("/settings?gmail=invalid-request", request.url)
+        new URL("/google-connected?gmail=invalid-request", request.url)
       );
     }
 
@@ -100,7 +100,7 @@ export async function GET(request: NextRequest) {
       !context.userId
     ) {
       return NextResponse.redirect(
-        new URL("/settings?gmail=invalid-state", request.url)
+        new URL("/google-connected?gmail=invalid-state", request.url)
       );
     }
 
@@ -113,9 +113,10 @@ export async function GET(request: NextRequest) {
     const { tokens } = await oauth2Client.getToken(code);
 
     if (!tokens.refresh_token) {
-      return NextResponse.redirect(
-        new URL("/settings?gmail=no-refresh-token", request.url)
-      );
+      const target = new URL("/google-connected", request.url);
+      target.searchParams.set("gmail", "no-refresh-token");
+      target.searchParams.set("return", context.returnTo === "leads" ? "leads" : "dashboard");
+      return NextResponse.redirect(target);
     }
 
     oauth2Client.setCredentials(tokens);
@@ -126,15 +127,13 @@ export async function GET(request: NextRequest) {
     });
 
     const profile = await oauth2.userinfo.get();
-
     const googleEmail = profile.data.email;
 
     if (!googleEmail) {
       throw new Error("Google account email was not returned");
     }
 
-    const encryptedRefreshToken =
-      encryptRefreshToken(tokens.refresh_token);
+    const encryptedRefreshToken = encryptRefreshToken(tokens.refresh_token);
 
     const expiresAt = tokens.expiry_date
       ? new Date(tokens.expiry_date).toISOString()
@@ -158,18 +157,17 @@ export async function GET(request: NextRequest) {
       }
     );
 
-    const response = NextResponse.redirect(
-      new URL("/?gmail=connected", request.url)
-    );
+    const target = new URL("/google-connected", request.url);
+    target.searchParams.set("gmail", "connected");
+    target.searchParams.set("return", context.returnTo === "leads" ? "leads" : "dashboard");
 
+    const response = NextResponse.redirect(target);
     response.cookies.delete("google_oauth_context");
-
     return response;
   } catch (error) {
     console.error("Google OAuth callback error:", error);
-
     return NextResponse.redirect(
-      new URL("/settings?gmail=error", request.url)
+      new URL("/google-connected?gmail=error", request.url)
     );
   }
 }
