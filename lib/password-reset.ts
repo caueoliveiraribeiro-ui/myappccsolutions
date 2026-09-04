@@ -9,7 +9,7 @@ const OWNER_IDS = new Set([
 ])
 
 export type ResetIssueResult =
-  | { ok: true; email: string }
+  | { ok: true; email: string; resendId?: string }
   | { ok: false; code: "not_found" | "protected" | "not_configured" | "rate_limited" | "email_failed" | "database_failed"; detail?: string }
 
 export function validEmail(email: string) {
@@ -52,6 +52,24 @@ async function consumePublicRate(bucket: string, limit: number) {
   return hits <= limit
 }
 
+export async function resendEmailStatus(emailId: string) {
+  const resendKey = process.env.RESEND_API_KEY
+  if (!resendKey || !emailId) return null
+
+  try {
+    const response = await fetch(`https://api.resend.com/emails/${encodeURIComponent(emailId)}`, {
+      headers: { Authorization: `Bearer ${resendKey}` },
+      cache: "no-store",
+      signal: AbortSignal.timeout(10000),
+    })
+    if (!response.ok) return null
+    const data = await response.json()
+    return typeof data?.last_event === "string" ? data.last_event : null
+  } catch {
+    return null
+  }
+}
+
 export async function issuePasswordReset(emailInput: string, options?: { publicIp?: string; bypassPublicRate?: boolean }): Promise<ResetIssueResult> {
   const email = emailInput.trim().toLowerCase()
   if (!validEmail(email)) return { ok: false, code: "not_found" }
@@ -64,12 +82,16 @@ export async function issuePasswordReset(emailInput: string, options?: { publicI
   }
 
   if (!options?.bypassPublicRate) {
-    const ip = options?.publicIp || "unknown"
-    const ipHash = createHmac("sha256", secret).update(ip).digest("hex")
-    const emailHash = createHmac("sha256", secret).update(email).digest("hex")
-    const ipAllowed = await consumePublicRate(`ip:${ipHash}`, 10)
-    const emailAllowed = await consumePublicRate(`email:${emailHash}`, 3)
-    if (!ipAllowed || !emailAllowed) return { ok: false, code: "rate_limited" }
+    try {
+      const ip = options?.publicIp || "unknown"
+      const ipHash = createHmac("sha256", secret).update(ip).digest("hex")
+      const emailHash = createHmac("sha256", secret).update(email).digest("hex")
+      const ipAllowed = await consumePublicRate(`ip:${ipHash}`, 10)
+      const emailAllowed = await consumePublicRate(`email:${emailHash}`, 3)
+      if (!ipAllowed || !emailAllowed) return { ok: false, code: "rate_limited" }
+    } catch (error) {
+      return { ok: false, code: "database_failed", detail: error instanceof Error ? error.message : String(error) }
+    }
   }
 
   let users: any[]
@@ -106,7 +128,11 @@ export async function issuePasswordReset(emailInput: string, options?: { publicI
 
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
-    headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
+    headers: {
+      Authorization: `Bearer ${resendKey}`,
+      "Content-Type": "application/json",
+      "Idempotency-Key": `orbit-password-reset-${user.id}-${hashedToken.slice(0, 16)}`,
+    },
     signal: AbortSignal.timeout(15000),
     body: JSON.stringify({
       from,
@@ -122,5 +148,11 @@ export async function issuePasswordReset(emailInput: string, options?: { publicI
     return { ok: false, code: "email_failed", detail: `${response.status}: ${detail}` }
   }
 
-  return { ok: true, email }
+  let resendId: string | undefined
+  try {
+    const data = await response.json()
+    if (typeof data?.id === "string") resendId = data.id
+  } catch {}
+
+  return { ok: true, email, resendId }
 }
