@@ -46,3 +46,18 @@ if('IntersectionObserver' in window&&!matchMedia('(prefers-reduced-motion: reduc
  const observer=new IntersectionObserver(entries=>entries.forEach(entry=>{if(entry.isIntersecting){entry.target.classList.add('is-visible');observer.unobserve(entry.target)}}),{threshold:.06});
  document.querySelectorAll('.reveal').forEach(element=>observer.observe(element));document.documentElement.classList.add('motion-ready');
 }
+
+// Preserve campaign/affiliate query parameters when visitors move from the
+// Plans page into Orbit's subscription confirmation page. The plan parameter
+// already present on each card is kept intact.
+(function preservePlanTrackingParams(){
+ const currentParams=new URLSearchParams(window.location.search);
+ if(!currentParams.size)return;
+ document.querySelectorAll('a[href^="/subscribe?plan="]').forEach(link=>{
+  const target=new URL(link.getAttribute('href'),window.location.origin);
+  currentParams.forEach((value,key)=>{
+   if(!target.searchParams.has(key))target.searchParams.append(key,value);
+  });
+  link.setAttribute('href',target.pathname+target.search);
+ });
+})();
