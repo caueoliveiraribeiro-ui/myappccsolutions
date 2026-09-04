@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useState } from "react"
 import { createPortal } from "react-dom"
 import { Mail, PlugZap, Unplug } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -11,56 +11,8 @@ type ConnectionState = {
   email: string | null
 }
 
-function ConnectionButtons({
-  status,
-  loading,
-  compact = false,
-  disconnect,
-}: {
-  status: ConnectionState
-  loading: boolean
-  compact?: boolean
-  disconnect: () => void
-}) {
-  return (
-    <div className="flex flex-wrap items-center gap-2">
-      {status.connected && status.email && (
-        <div className={compact
-          ? "flex items-center gap-2 rounded-lg border border-emerald-300/20 bg-emerald-300/10 px-2.5 py-1.5 text-[11px] text-emerald-100"
-          : "flex items-center gap-2 rounded-lg border border-emerald-300/20 bg-emerald-300/10 px-3 py-2 text-xs text-emerald-100"}
-        >
-          <Mail size={14} />
-          <span className={compact ? "max-w-[180px] truncate" : "max-w-[240px] truncate"}>{status.email}</span>
-        </div>
-      )}
-
-      {!status.connected ? (
-        <Button asChild size="sm" className="bg-cyan-300 text-slate-950">
-          <a href="/api/google/connect?return=leads">
-            <PlugZap size={15} />
-            Connect email account
-          </a>
-        </Button>
-      ) : (
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          disabled={loading}
-          onClick={disconnect}
-          className="border-red-400/30 text-red-200 hover:bg-red-400/10"
-        >
-          <Unplug size={15} />
-          {loading ? "Disconnecting…" : "Disconnect email"}
-        </Button>
-      )}
-    </div>
-  )
-}
-
 export function LeadDirectoryEmailControls() {
-  const [headerTarget, setHeaderTarget] = useState<HTMLElement | null>(null)
-  const [leadTargets, setLeadTargets] = useState<HTMLElement[]>([])
+  const [target, setTarget] = useState<HTMLElement | null>(null)
   const [status, setStatus] = useState<ConnectionState>({ connected: false, email: null })
   const [loading, setLoading] = useState(false)
 
@@ -100,13 +52,15 @@ export function LeadDirectoryEmailControls() {
         (node) => node.textContent?.trim() === "Lead directory",
       )
       if (!heading) {
-        setHeaderTarget(null)
-        setLeadTargets([])
+        setTarget(null)
         return
       }
 
       const panel = heading.closest("[data-slot='card']") || heading.parentElement?.parentElement
       if (!(panel instanceof HTMLElement)) return
+
+      // Clean up the old duplicated inline controls if a previous render left them behind.
+      panel.querySelectorAll("[data-orbit-lead-inline-email-controls='true']").forEach((node) => node.remove())
 
       let slot = panel.querySelector<HTMLElement>("[data-orbit-lead-email-controls='true']")
       if (!slot) {
@@ -114,34 +68,16 @@ export function LeadDirectoryEmailControls() {
         slot.dataset.orbitLeadEmailControls = "true"
         slot.className = "mb-4 flex flex-wrap items-center justify-end gap-2"
         const headingRow = heading.parentElement
-        if (headingRow && headingRow !== panel) {
-          headingRow.appendChild(slot)
-        } else {
-          heading.insertAdjacentElement("afterend", slot)
-        }
+        if (headingRow && headingRow !== panel) headingRow.appendChild(slot)
+        else heading.insertAdjacentElement("afterend", slot)
       }
-      setHeaderTarget(slot)
+      setTarget(slot)
 
-      const inlineSlots: HTMLElement[] = []
-      panel.querySelectorAll("details form").forEach((form, index) => {
-        const actionRow = Array.from(form.querySelectorAll<HTMLElement>("div")).find((div) =>
-          Array.from(div.querySelectorAll("button")).some((button) => button.textContent?.trim() === "Email"),
-        )
-        if (!actionRow) return
-
-        let inline = actionRow.querySelector<HTMLElement>("[data-orbit-lead-inline-email-controls='true']")
-        if (!inline) {
-          inline = document.createElement("div")
-          inline.dataset.orbitLeadInlineEmailControls = "true"
-          inline.dataset.orbitLeadIndex = String(index)
-          inline.className = "flex flex-wrap items-center gap-2"
-          actionRow.appendChild(inline)
-        }
-        inlineSlots.push(inline)
-      })
-      setLeadTargets((current) => {
-        if (current.length === inlineSlots.length && current.every((item, index) => item === inlineSlots[index])) return current
-        return inlineSlots
+      panel.querySelectorAll<HTMLButtonElement>("button").forEach((button) => {
+        if (button.textContent?.trim() !== "Email") return
+        button.disabled = !status.connected
+        button.title = status.connected ? "Send email with your connected account" : "Connect an email account first"
+        button.setAttribute("aria-disabled", status.connected ? "false" : "true")
       })
     }
 
@@ -153,22 +89,7 @@ export function LeadDirectoryEmailControls() {
       observer.disconnect()
       window.clearInterval(timer)
     }
-  }, [])
-
-  useEffect(() => {
-    const heading = Array.from(document.querySelectorAll("h2")).find(
-      (node) => node.textContent?.trim() === "Lead directory",
-    )
-    const panel = heading?.closest("[data-slot='card']") || heading?.parentElement?.parentElement
-    if (!panel) return
-
-    panel.querySelectorAll<HTMLButtonElement>("button").forEach((button) => {
-      if (button.textContent?.trim() !== "Email") return
-      button.disabled = !status.connected
-      button.title = status.connected ? "Send email with your connected account" : "Connect an email account first"
-      button.setAttribute("aria-disabled", status.connected ? "false" : "true")
-    })
-  }, [status.connected, leadTargets])
+  }, [status.connected])
 
   async function disconnect() {
     setLoading(true)
@@ -185,24 +106,37 @@ export function LeadDirectoryEmailControls() {
     }
   }
 
-  const portals = useMemo(() => {
-    const output = []
-    if (headerTarget) {
-      output.push(createPortal(
-        <ConnectionButtons status={status} loading={loading} disconnect={() => void disconnect()} />,
-        headerTarget,
-        "lead-directory-email-header",
-      ))
-    }
-    leadTargets.forEach((target, index) => {
-      output.push(createPortal(
-        <ConnectionButtons compact status={status} loading={loading} disconnect={() => void disconnect()} />,
-        target,
-        `lead-directory-email-${index}`,
-      ))
-    })
-    return output
-  }, [headerTarget, leadTargets, status, loading])
+  if (!target) return null
 
-  return <>{portals}</>
+  return createPortal(
+    <div className="flex flex-wrap items-center gap-2">
+      {status.connected && status.email && (
+        <div className="flex items-center gap-2 rounded-lg border border-emerald-300/20 bg-emerald-300/10 px-3 py-2 text-xs text-emerald-100">
+          <Mail size={14} />
+          <span className="max-w-[240px] truncate">{status.email}</span>
+        </div>
+      )}
+      {!status.connected ? (
+        <Button asChild size="sm" className="bg-cyan-300 text-slate-950">
+          <a href="/api/google/connect?return=leads">
+            <PlugZap size={15} />
+            Connect email account
+          </a>
+        </Button>
+      ) : (
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          disabled={loading}
+          onClick={() => void disconnect()}
+          className="border-red-400/30 text-red-200 hover:bg-red-400/10"
+        >
+          <Unplug size={15} />
+          {loading ? "Disconnecting…" : "Disconnect email"}
+        </Button>
+      )}
+    </div>,
+    target,
+  )
 }
