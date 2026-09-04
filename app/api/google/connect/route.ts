@@ -55,10 +55,11 @@ export async function GET(request: NextRequest) {
     prompt: "consent",
     state,
     scope: [
-      "https://www.googleapis.com/auth/gmail.send",
-      "openid",
-      "email",
-    ],
+  "https://www.googleapis.com/auth/gmail.send",
+  "https://www.googleapis.com/auth/calendar.events",
+  "openid",
+  "email",
+],
   });
 
   const response = NextResponse.redirect(authorizationUrl);
