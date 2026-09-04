@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Search, ShieldCheck, Users, CreditCard, UserCog, ChevronLeft, ChevronRight, RefreshCw } from "lucide-react"
+import { Search, ShieldCheck, Users, CreditCard, UserCog, ChevronLeft, ChevronRight, RefreshCw, Trash2 } from "lucide-react"
+import { toast } from "sonner"
 
 type UserRow = {
   id: string
@@ -49,6 +50,7 @@ export function AdminUserDirectory({ onSelect }: { onSelect: (email: string) => 
   const [metrics, setMetrics] = useState<Metrics>({ totalAccounts: 0, activePaid: 0, noPlan: 0, pastDue: 0, canceled: 0 })
   const [hasMore, setHasMore] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [deletingId, setDeletingId] = useState("")
   const [error, setError] = useState("")
 
   const params = useMemo(() => {
@@ -71,6 +73,37 @@ export function AdminUserDirectory({ onSelect }: { onSelect: (email: string) => 
       setError(e instanceof Error ? e.message : "Could not load Orbit accounts.")
     } finally {
       setBusy(false)
+    }
+  }
+
+  async function deleteUser(row: UserRow) {
+    if (row.isOwner || deletingId) return
+
+    const confirmation = window.prompt(
+      `Permanently delete ${row.email} and this user's Orbit application data?\n\nThis cannot be undone. Type the exact email address to confirm.`,
+    )
+    if (confirmation === null) return
+    if (confirmation.trim().toLowerCase() !== row.email.trim().toLowerCase()) {
+      toast.error("The email did not match. Nothing was deleted.")
+      return
+    }
+
+    setDeletingId(row.id)
+    try {
+      const r = await fetch("/api/admin/users", {
+        method: "DELETE",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ userId: row.id, confirmEmail: confirmation.trim() }),
+      })
+      const d = await r.json().catch(() => ({}))
+      if (!r.ok) throw new Error(d.error || "Could not delete this Orbit account.")
+      setRows((current) => current.filter((item) => item.id !== row.id))
+      toast.success(`${row.email} was deleted from Orbit.`)
+      await load()
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not delete this Orbit account.")
+    } finally {
+      setDeletingId("")
     }
   }
 
@@ -145,7 +178,7 @@ export function AdminUserDirectory({ onSelect }: { onSelect: (email: string) => 
         {error && <div className="m-4 rounded-xl border border-red-400/20 bg-red-400/10 p-3 text-sm text-red-200">{error}</div>}
 
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[920px] text-left text-sm">
+          <table className="w-full min-w-[980px] text-left text-sm">
             <thead className="border-b border-white/[.07] bg-black/[.12] text-[10px] uppercase tracking-[.14em] text-slate-500">
               <tr>
                 <th className="px-4 py-3 font-semibold">Account</th>
@@ -168,10 +201,25 @@ export function AdminUserDirectory({ onSelect }: { onSelect: (email: string) => 
                   <td className="px-4 py-3"><Badge variant="outline" className="border-white/10 bg-white/[.03] text-slate-300">{statusLabel(row.status)}</Badge></td>
                   <td className="px-4 py-3 text-xs text-slate-400">{row.accessUntil ? new Date(row.accessUntil).toLocaleString() : "—"}</td>
                   <td className="px-4 py-3 text-xs text-slate-400">{row.stripeCustomerId ? "Stripe linked" : "Not linked"}</td>
-                  <td className="px-4 py-3 text-right">
-                    <Button disabled={row.isOwner} onClick={() => onSelect(row.email)} className="h-9 rounded-xl bg-cyan-300 px-3 text-xs font-semibold text-slate-950 hover:bg-cyan-200">
-                      {row.isOwner ? "Protected owner" : "Manage"}
-                    </Button>
+                  <td className="px-4 py-3">
+                    <div className="flex justify-end gap-2">
+                      <Button disabled={row.isOwner || deletingId === row.id} onClick={() => onSelect(row.email)} className="h-9 rounded-xl bg-cyan-300 px-3 text-xs font-semibold text-slate-950 hover:bg-cyan-200">
+                        {row.isOwner ? "Protected owner" : "Manage"}
+                      </Button>
+                      {!row.isOwner && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          disabled={Boolean(deletingId)}
+                          onClick={() => deleteUser(row)}
+                          title="Permanently delete this Orbit user"
+                          className="h-9 rounded-xl border-red-400/35 bg-red-400/[.04] px-3 text-xs font-semibold text-red-200 hover:bg-red-400/10"
+                        >
+                          <Trash2 size={14} />
+                          {deletingId === row.id ? "Deleting…" : "Delete"}
+                        </Button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
