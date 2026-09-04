@@ -3,6 +3,7 @@ import type { Metadata } from "next"
 import { Figtree } from "next/font/google"
 import "./globals.css"
 import { Toaster } from "@/components/ui/sonner"
+import { OrbitSupportChat } from "@/components/orbit-support-chat"
 
 const figtree = Figtree({
   subsets: ["latin"],
@@ -22,8 +23,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${figtree.variable} antialiased`}>
-      <body className="font-sans">{children}<Toaster richColors theme="dark" /></body>
+      <body className="font-sans">
+        {children}
+        <OrbitSupportChat />
+        <Toaster richColors theme="dark" />
+      </body>
     </html>
   )
 }
-
