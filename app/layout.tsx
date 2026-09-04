@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/sonner"
 import { OrbitSupportChat } from "@/components/orbit-support-chat"
 import { LeadsManagerGoogleOnly } from "@/components/leads-manager-google-only"
 import { LeadDirectoryEmailControls } from "@/components/lead-directory-email-controls"
+import { CrmEmailActions } from "@/components/crm-email-actions"
 
 const figtree = Figtree({
   subsets: ["latin"],
@@ -30,6 +31,7 @@ export default function RootLayout({
         <OrbitSupportChat />
         <LeadsManagerGoogleOnly />
         <LeadDirectoryEmailControls />
+        <CrmEmailActions />
         <Toaster richColors theme="dark" />
       </body>
     </html>
