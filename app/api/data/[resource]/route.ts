@@ -4,6 +4,10 @@ import {getSession} from "@/lib/auth"
 import {db,hasDatabase} from "@/lib/supabase"
 import {accountAccess,upgradeResponse,planWriteError} from "@/lib/plan-access"
 import {featureForResource} from "@/lib/plan-features"
+import {
+  syncCrmCalendarEvent,
+  deleteCrmCalendarEvent,
+} from "@/lib/google-calendar-sync"
 const allowed=new Set(["leads","tasks","assets","projects","activities","clients","expenses","grocery_items","portfolios","holdings","payment_records"])
 type U={id:string;email:string}
 type Context={params:Promise<{resource:string}>}
@@ -58,7 +62,47 @@ export async function POST(request:Request,{params}:Context){
   if(!await permitted(u.id,resource,row))return upgradeResponse()
   if(["assets","holdings","portfolios"].includes(resource)&&!["Stock","Crypto"].includes(String(row[resource==="portfolios"?"portfolio_type":"asset_type"]||"Stock")))return NextResponse.json({error:"Choose Stock or Crypto as the asset type."},{status:400})
   if(!await validLinks(resource,row))return NextResponse.json({error:"Choose related records from the same workspace and asset type."},{status:400})
-  return NextResponse.json({items:await db(resource,{method:"POST",body:JSON.stringify(row)})})
+  const items = await db(resource, {
+  method: "POST",
+  body: JSON.stringify(row),
+})
+
+if (resource === "tasks" && items?.[0]) {
+  const task = items[0]
+
+  try {
+    const sync = await syncCrmCalendarEvent({
+      userId: task.user_id,
+      entityType: "task",
+      entityId: task.id,
+      title: `Task: ${task.title || "Untitled task"}`,
+      date: task.due_date || null,
+      googleEventId: task.google_calendar_event_id || null,
+      description: task.description || task.notes || "",
+    })
+
+    if (sync.synced && sync.googleEventId) {
+      const updated = await db(
+        `tasks?id=eq.${encodeURIComponent(task.id)}&user_id=eq.${task.user_id}`,
+        {
+          method: "PATCH",
+          body: JSON.stringify({
+            google_calendar_event_id: sync.googleEventId,
+            updated_at: new Date().toISOString(),
+          }),
+        }
+      )
+
+      if (updated?.[0]) {
+        items[0] = updated[0]
+      }
+    }
+  } catch (error) {
+    console.error("Task calendar sync failed:", error)
+  }
+}
+
+return NextResponse.json({ items })
  }catch(e){return failure(e)}
 }
 export async function PATCH(request:Request,{params}:Context){
@@ -71,9 +115,69 @@ export async function PATCH(request:Request,{params}:Context){
   for(const key of ["asset_type","portfolio_type"])if(current[key]&&row[key]!==current[key])return NextResponse.json({error:"An asset's type cannot be changed."},{status:400})
   if(!await permitted(u.id,resource,current)||!await permitted(u.id,resource,row)||!await permitted(current.user_id,resource,row))return upgradeResponse()
   if(!await validLinks(resource,row,changes))return NextResponse.json({error:"Choose related records from the same workspace and asset type."},{status:400})
-  return NextResponse.json({items:await db(`${resource}?id=eq.${encodeURIComponent(id)}&user_id=eq.${current.user_id}`,{method:"PATCH",body:JSON.stringify({...cleanFields(changes),updated_at:new Date().toISOString()})})})
- }catch(e){return failure(e)}
+ const items = await db(
+  `${resource}?id=eq.${encodeURIComponent(id)}&user_id=eq.${current.user_id}`,
+  {
+    method: "PATCH",
+    body: JSON.stringify({
+      ...cleanFields(changes),
+      updated_at: new Date().toISOString(),
+    }),
+  }
+)
+
+if (resource === "tasks" && items?.[0]) {
+  const task = items[0]
+
+  try {
+    const sync = await syncCrmCalendarEvent({
+      userId: task.user_id,
+      entityType: "task",
+      entityId: task.id,
+      title: `Task: ${task.title || "Untitled task"}`,
+      date: task.due_date || null,
+      googleEventId:
+        task.google_calendar_event_id ||
+        current.google_calendar_event_id ||
+        null,
+      description: task.description || task.notes || "",
+    })
+
+    const nextGoogleEventId =
+      sync.googleEventId === undefined
+        ? task.google_calendar_event_id || current.google_calendar_event_id || null
+        : sync.googleEventId
+
+    if (
+      nextGoogleEventId !==
+      (task.google_calendar_event_id || null)
+    ) {
+      const updated = await db(
+        `tasks?id=eq.${encodeURIComponent(task.id)}&user_id=eq.${task.user_id}`,
+        {
+          method: "PATCH",
+          body: JSON.stringify({
+            google_calendar_event_id: nextGoogleEventId,
+            updated_at: new Date().toISOString(),
+          }),
+        }
+      )
+
+      if (updated?.[0]) {
+        items[0] = updated[0]
+      }
+    }
+  } catch (error) {
+    console.error("Task calendar update failed:", error)
+  }
 }
+
+return NextResponse.json({ items })
+} catch (e) {
+  return failure(e)
+}
+}
+
 export async function DELETE(request:Request,{params}:Context){
  const u=await auth();if(!u)return NextResponse.json({error:"Please sign in again."},{status:401})
  const {resource}=await params;if(!allowed.has(resource))return NextResponse.json({error:"Section unavailable."},{status:404})
@@ -81,7 +185,22 @@ export async function DELETE(request:Request,{params}:Context){
   const {id}=await request.json(),row=await target(resource,id,u)
   if(!row)return NextResponse.json({error:"You cannot delete this record."},{status:403})
   if(!await permitted(u.id,resource,row)||!await permitted(row.user_id,resource,row))return upgradeResponse()
-  await db(`${resource}?id=eq.${encodeURIComponent(id)}&user_id=eq.${row.user_id}`,{method:"DELETE"})
-  return NextResponse.json({ok:true})
+if (resource === "tasks" && row.google_calendar_event_id) {
+  try {
+    await deleteCrmCalendarEvent({
+      userId: row.user_id,
+      googleEventId: row.google_calendar_event_id,
+    })
+  } catch (error) {
+    console.error("Task calendar delete failed:", error)
+  }
+}
+
+await db(
+  `${resource}?id=eq.${encodeURIComponent(id)}&user_id=eq.${row.user_id}`,
+  { method: "DELETE" }
+)
+
+return NextResponse.json({ ok: true })
  }catch(e){return failure(e)}
 }
