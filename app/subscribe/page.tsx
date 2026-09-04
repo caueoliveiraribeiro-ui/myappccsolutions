@@ -1,4 +1,5 @@
 import { cookies } from "next/headers"
+import { redirect } from "next/navigation"
 import { getSession } from "@/lib/auth"
 import { accountAccess } from "@/lib/plan-access"
 import { StripeSubscription } from "@/components/stripe-subscription"
@@ -10,6 +11,12 @@ import {
 import { getStripe, stripeBillingReady } from "@/lib/stripe"
 
 export const dynamic = "force-dynamic"
+
+const hotmartCheckouts = {
+  personal: "https://pay.hotmart.com/G107468574F?off=fcv6cun6",
+  small_business: "https://pay.hotmart.com/G107468574F?off=qks1vkpc",
+  big_business: "https://pay.hotmart.com/G107468574F?off=n37sgoia",
+} as const
 
 function formatStripeAmount(unitAmount: number, currency: string) {
   const zeroDecimalCurrencies = new Set([
@@ -51,6 +58,9 @@ export default async function Subscribe({
       </main>
     )
   }
+
+  const hotmartCheckout = hotmartCheckouts[plan as keyof typeof hotmartCheckouts]
+  if (hotmartCheckout) redirect(hotmartCheckout)
 
   const token = (await cookies()).get("orbit_session")?.value
   const user = token ? await getSession(token) : null
