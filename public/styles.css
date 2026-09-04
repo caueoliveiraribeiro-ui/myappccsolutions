@@ -1,6 +1,6 @@
-@import url('https://cdn.jsdelivr.net/gh/caueoliveiraribeiro-ui/orbit-landing-page@main/public/theme.css');
-@import url('https://cdn.jsdelivr.net/gh/caueoliveiraribeiro-ui/orbit-landing-page@main/public/motion.css');
-@import url('https://cdn.jsdelivr.net/gh/caueoliveiraribeiro-ui/orbit-landing-page@main/public/pricing.css');
-@import url('https://cdn.jsdelivr.net/gh/caueoliveiraribeiro-ui/orbit-landing-page@main/public/stories.css');
-@import url('https://cdn.jsdelivr.net/gh/caueoliveiraribeiro-ui/orbit-landing-page@main/public/circle.css');
-@import url('https://cdn.jsdelivr.net/gh/caueoliveiraribeiro-ui/orbit-landing-page@main/public/mobile.css');
+@import url('/theme.css');
+@import url('/motion.css');
+@import url('/pricing.css');
+@import url('/stories.css');
+@import url('/circle.css');
+@import url('/mobile.css');
