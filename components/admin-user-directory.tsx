@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Search, ShieldCheck, Users, CreditCard, UserCog, ChevronLeft, ChevronRight, RefreshCw, Trash2 } from "lucide-react"
+import { AdminSupportInbox } from "@/components/admin-support-inbox"
+import { Search, ShieldCheck, Users, CreditCard, UserCog, ChevronLeft, ChevronRight, RefreshCw, Trash2, MessageCircleMore, X } from "lucide-react"
 import { toast } from "sonner"
 
 type UserRow = {
@@ -51,6 +52,7 @@ export function AdminUserDirectory({ onSelect }: { onSelect: (email: string) => 
   const [hasMore, setHasMore] = useState(false)
   const [busy, setBusy] = useState(false)
   const [deletingId, setDeletingId] = useState("")
+  const [supportOpen, setSupportOpen] = useState(false)
   const [error, setError] = useState("")
 
   const params = useMemo(() => {
@@ -116,6 +118,15 @@ export function AdminUserDirectory({ onSelect }: { onSelect: (email: string) => 
     setPage(1)
   }, [query, plan, status])
 
+  useEffect(() => {
+    if (!supportOpen) return
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setSupportOpen(false)
+    }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [supportOpen])
+
   const cards = [
     ["Accounts", metrics.totalAccounts, Users],
     ["Active paid", metrics.activePaid, CreditCard],
@@ -145,9 +156,14 @@ export function AdminUserDirectory({ onSelect }: { onSelect: (email: string) => 
               <h4 className="mt-1 text-lg font-semibold">Orbit account directory</h4>
               <p className="mt-1 text-xs text-slate-500">Application account, subscription and access data only. No investment, portfolio or personal finance data is loaded here.</p>
             </div>
-            <Button variant="outline" onClick={load} disabled={busy} className="h-10 rounded-xl border-white/10 bg-white/[.03]">
-              <RefreshCw size={15} className={busy ? "mr-2 animate-spin" : "mr-2"} /> Refresh
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" onClick={() => setSupportOpen(true)} className="h-10 rounded-xl bg-cyan-300 px-4 font-semibold text-slate-950 hover:bg-cyan-200">
+                <MessageCircleMore size={15} className="mr-2" /> Support Inbox
+              </Button>
+              <Button variant="outline" onClick={load} disabled={busy} className="h-10 rounded-xl border-white/10 bg-white/[.03]">
+                <RefreshCw size={15} className={busy ? "mr-2 animate-spin" : "mr-2"} /> Refresh
+              </Button>
+            </div>
           </div>
 
           <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_180px_180px]">
@@ -238,6 +254,22 @@ export function AdminUserDirectory({ onSelect }: { onSelect: (email: string) => 
           </div>
         </div>
       </Card>
+
+      {supportOpen && (
+        <div className="fixed inset-0 z-[120] bg-black/80 p-2 backdrop-blur-sm sm:p-5" role="dialog" aria-modal="true" aria-label="Orbit Support Inbox">
+          <div className="relative h-full overflow-auto rounded-[28px] border border-cyan-300/20 bg-[#050812] shadow-[0_30px_120px_rgba(0,0,0,.65)]">
+            <button
+              type="button"
+              onClick={() => setSupportOpen(false)}
+              aria-label="Close Support Inbox"
+              className="fixed right-5 top-5 z-[130] grid h-11 w-11 place-items-center rounded-xl border border-white/15 bg-[#0b1320]/95 text-slate-200 shadow-xl hover:bg-white/10 sm:right-8 sm:top-8"
+            >
+              <X size={19} />
+            </button>
+            <AdminSupportInbox />
+          </div>
+        </div>
+      )}
     </div>
   )
 }
