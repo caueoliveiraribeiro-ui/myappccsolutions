@@ -159,7 +159,7 @@ export async function GET(request: NextRequest) {
     );
 
     const response = NextResponse.redirect(
-      new URL("/settings?gmail=connected", request.url)
+      new URL("/?gmail=connected", request.url)
     );
 
     response.cookies.delete("google_oauth_context");
