@@ -3,25 +3,28 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import type { StandardPlan } from "@/lib/stripe-plans"
+import type { StripePlan } from "@/lib/stripe-plans"
 
 export function StripeSubscription({
   plan,
   name,
-  monthlyUsd,
+  amountUsd,
+  billingMode,
   email,
   ready,
   owner,
 }: {
-  plan: StandardPlan
+  plan: StripePlan
   name: string
-  monthlyUsd: number
-  email: string
+  amountUsd?: number
+  billingMode: "subscription" | "payment"
+  email?: string
   ready: boolean
   owner: boolean
 }) {
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState("")
+  const recurring = billingMode === "subscription"
 
   async function openCheckout() {
     setBusy(true)
@@ -67,31 +70,39 @@ export function StripeSubscription({
 
         <h1 className="mt-4 text-3xl font-semibold">{name}</h1>
 
-        <p className="mt-5 text-4xl font-semibold">
-          US$ {monthlyUsd.toFixed(2)}
-          <span className="text-base font-normal text-slate-300">
-            {" "}
-            / month
-          </span>
-        </p>
+        {typeof amountUsd === "number" ? (
+          <p className="mt-5 text-4xl font-semibold">
+            US$ {amountUsd.toFixed(2)}
+            <span className="text-base font-normal text-slate-300">
+              {recurring ? " / month" : " one-time"}
+            </span>
+          </p>
+        ) : (
+          <p className="mt-5 text-lg font-medium text-cyan-100">
+            Final amount and available currency are shown securely by Stripe.
+          </p>
+        )}
 
         <p className="mt-4 text-sm leading-6 text-slate-300">
-          Renews monthly until canceled. Taxes and the final amount are shown
-          securely by Stripe before payment.
+          {recurring
+            ? "Renews monthly until canceled. Taxes and the final amount are shown securely by Stripe before payment."
+            : "This is a one-time Business Customization payment. Taxes and the final amount are shown securely by Stripe before payment."}
         </p>
 
-        <p className="my-5 break-all rounded-xl border border-cyan-200/20 p-3 text-sm">
-          Plan access will be attached to <strong>{email}</strong>.
-        </p>
+        {email && (
+          <p className="my-5 break-all rounded-xl border border-cyan-200/20 p-3 text-sm">
+            {recurring ? "Plan access" : "Purchase"} will be attached to{" "}
+            <strong>{email}</strong>.
+          </p>
+        )}
 
-        {owner ? (
+        {owner && recurring ? (
           <p className="text-cyan-100">
-            Your owner account already has full access. No payment is needed.
+            Your owner account already has full access. No subscription is needed.
           </p>
         ) : !ready ? (
           <p role="status" className="text-cyan-100">
-            Subscriptions are being prepared. Checkout is not open yet, and no
-            payment has been taken.
+            Checkout is being prepared. No payment has been taken.
           </p>
         ) : (
           <Button
