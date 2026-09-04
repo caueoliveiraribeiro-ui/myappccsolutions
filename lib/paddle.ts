@@ -1,5 +1,5 @@
 import {createHmac,timingSafeEqual} from "node:crypto"
-export const ORBIT_ORIGIN="https://orbit-lifemanagement.vercel.app"
+export const ORBIT_ORIGIN="https://www.orbit-lm.com"
 export function billingReady(){
   return process.env.PADDLE_CHECKOUT_ENABLED==="true" &&
     process.env.PADDLE_ENV==="production" &&
