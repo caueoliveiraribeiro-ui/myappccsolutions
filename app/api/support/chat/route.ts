@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { cookies } from "next/headers"
 import { getSession } from "@/lib/auth"
 import { answerOrbitSupport, type OrbitSupportContext } from "@/lib/orbit-support-agent"
+import { addSupportMessage, getOrCreateOpenConversation, markHumanRequested } from "@/lib/support-store"
 
 const MAX_BODY_BYTES = 16_384
 const MAX_MESSAGE_CHARS = 2_000
@@ -38,8 +39,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Message must be between 1 and 2000 characters" }, { status: 400 })
   }
 
-  // Public visitors can use the safe first-party knowledge layer. Account-derived
-  // context is accepted only when the requester has a valid Orbit session.
   const rawContext = user && data.context && typeof data.context === "object"
     ? (data.context as Record<string, unknown>)
     : {}
@@ -54,8 +53,24 @@ export async function POST(req: NextRequest) {
 
   try {
     const result = await answerOrbitSupport(message, context)
+    let conversationId: string | null = null
+
+    if (user) {
+      try {
+        const conversation = await getOrCreateOpenConversation(user.id, message.slice(0, 80))
+        if (conversation?.id) {
+          conversationId = conversation.id
+          await addSupportMessage(conversation.id, "user", message)
+          await addSupportMessage(conversation.id, "orbit_ai", result.reply)
+          if (result.needsHuman) await markHumanRequested(conversation.id)
+        }
+      } catch (persistError) {
+        console.error("ORBIT_SUPPORT_PERSIST_FAILED", persistError)
+      }
+    }
+
     return NextResponse.json(
-      { ...result, authenticated: Boolean(user) },
+      { ...result, authenticated: Boolean(user), conversationId },
       { headers: { "Cache-Control": "no-store" } },
     )
   } catch (error) {
