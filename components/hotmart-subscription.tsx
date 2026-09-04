@@ -19,9 +19,22 @@ export function HotmartSubscription({
 }) {
   const [busy, setBusy] = useState(false)
 
+  function checkoutWithTracking() {
+    const target = new URL(checkoutUrl)
+    const current = new URLSearchParams(window.location.search)
+
+    current.forEach((value, key) => {
+      if (key !== "plan" && !target.searchParams.has(key)) {
+        target.searchParams.append(key, value)
+      }
+    })
+
+    return target.toString()
+  }
+
   function openCheckout() {
     setBusy(true)
-    window.location.assign(checkoutUrl)
+    window.location.assign(checkoutWithTracking())
   }
 
   return (
