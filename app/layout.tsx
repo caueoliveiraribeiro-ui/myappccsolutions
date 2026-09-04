@@ -4,6 +4,7 @@ import { Figtree } from "next/font/google"
 import "./globals.css"
 import { Toaster } from "@/components/ui/sonner"
 import { OrbitSupportChat } from "@/components/orbit-support-chat"
+import { LeadsManagerGoogleOnly } from "@/components/leads-manager-google-only"
 
 const figtree = Figtree({
   subsets: ["latin"],
@@ -26,6 +27,7 @@ export default function RootLayout({
       <body className="font-sans">
         {children}
         <OrbitSupportChat />
+        <LeadsManagerGoogleOnly />
         <Toaster richColors theme="dark" />
       </body>
     </html>
