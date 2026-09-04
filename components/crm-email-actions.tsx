@@ -100,11 +100,20 @@ export function CrmEmailActions() {
       const pipelinePanel = pipelineHeading?.closest("[data-slot='card']") || pipelineHeading?.parentElement?.parentElement
       if (pipelinePanel instanceof HTMLElement) {
         pipelinePanel.querySelectorAll<HTMLFormElement>("details form").forEach((form, index) => {
-          // Keep Description directly below Status and immediately above Management notes.
+          // Move Description once so the stable order is Status → Description → Management notes.
+          // The previous unconditional DOM move retriggered MutationObserver continuously and could lock the Pipeline tab.
           const description = form.querySelector<HTMLTextAreaElement>('textarea[name="description"]')?.closest("label")
           const notes = form.querySelector<HTMLTextAreaElement>('textarea[name="notes"]')?.closest("label")
-          if (description && notes && description.parentElement === notes.parentElement) {
-            notes.parentElement?.insertBefore(description, notes)
+          const status = form.querySelector<HTMLSelectElement>('select[name="status"]')?.closest("label")
+          if (
+            description &&
+            notes &&
+            status &&
+            description.parentElement === notes.parentElement &&
+            description.parentElement === status.parentElement &&
+            status.nextElementSibling !== description
+          ) {
+            status.insertAdjacentElement("afterend", description)
           }
 
           const id = `pipeline-${index}`
@@ -124,7 +133,7 @@ export function CrmEmailActions() {
 
         // Payment notes are no longer part of the project information UI.
         const paymentNotes = form.querySelector<HTMLTextAreaElement>('textarea[name="payment_notes"]')?.closest("label")
-        if (paymentNotes instanceof HTMLElement) paymentNotes.hidden = true
+        if (paymentNotes instanceof HTMLElement && !paymentNotes.hidden) paymentNotes.hidden = true
 
         const id = `project-${index}`
         const slot = addSlot(form, id, "project")
