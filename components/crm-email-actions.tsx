@@ -93,15 +93,14 @@ export function CrmEmailActions() {
         })
       }
 
-      // Pipeline → Lead history / Archived leads → each lead dropdown.
-      const pipelineHeading = Array.from(document.querySelectorAll("h2")).find((node) => {
-        const text = node.textContent?.trim()
-        return text === "Lead history" || text === "Archived leads"
-      })
+      // Pipeline → Lead history → each lead/client history dropdown.
+      const pipelineHeading = Array.from(document.querySelectorAll("h2")).find(
+        (node) => node.textContent?.trim() === "Lead history",
+      )
       const pipelinePanel = pipelineHeading?.closest("[data-slot='card']") || pipelineHeading?.parentElement?.parentElement
       if (pipelinePanel instanceof HTMLElement) {
         pipelinePanel.querySelectorAll<HTMLFormElement>("details form").forEach((form, index) => {
-          // Keep Description directly above Management notes, after Status.
+          // Keep Description directly below Status and immediately above Management notes.
           const description = form.querySelector<HTMLTextAreaElement>('textarea[name="description"]')?.closest("label")
           const notes = form.querySelector<HTMLTextAreaElement>('textarea[name="notes"]')?.closest("label")
           if (description && notes && description.parentElement === notes.parentElement) {
