@@ -29,19 +29,27 @@ function Badge({
   className,
   variant,
   asChild = false,
+  children,
   ...props
 }: React.ComponentProps<'span'> &
   VariantProps<typeof badgeVariants> & { asChild?: boolean }) {
   const Comp = asChild ? Slot : 'span'
+  const done = !asChild && typeof children === 'string' && children.trim().toLowerCase() === 'done'
 
   return (
     <Comp
       data-slot="badge"
       className={cn(badgeVariants({ variant }), className)}
       {...props}
-    />
+    >
+      {done && (
+        <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <path d="M3 8.25 6.2 11.3 13 4.7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      )}
+      {children}
+    </Comp>
   )
 }
 
 export { Badge, badgeVariants }
-
