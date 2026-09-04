@@ -1,0 +1,123 @@
+/* Mobile layout only: keep the desktop composition and all access rules intact. */
+@media(max-width:800px){
+ .wrap>*{min-width:0}
+ .plans{grid-template-columns:minmax(0,1fr);max-width:540px;margin-inline:auto;gap:30px}
+ .plan{width:100%;text-align:center;padding:32px}
+ .plan>p{min-height:0;max-width:38ch;margin-inline:auto}
+ .plan .previous-price{justify-content:center;flex-wrap:wrap}
+ .plan li{justify-content:center}
+ .plan .plan-button{width:100%}
+ .customization-plan{grid-template-columns:minmax(0,1fr);gap:28px}
+ .custom-plan-benefits ul{grid-template-columns:minmax(0,1fr)}
+ .custom-plan-intro>p,.custom-plan-benefits .plan-foot{max-width:44ch;margin-inline:auto}
+ .custom-plan-intro .button{white-space:normal}
+ .section-heading,.stories-heading,.circle-copy,.custom,.faq>div:first-child{text-align:center}
+ .section-heading .eyebrow,.stories-heading .eyebrow,.circle-copy .eyebrow,.custom .eyebrow,.faq .eyebrow{justify-content:center}
+ .section-heading>p,.stories-heading>p,.circle-lead{margin-inline:auto}
+ .circle-benefits{max-width:420px;margin-inline:auto}
+ .circle-benefits>div{flex-direction:column;align-items:center;gap:6px}
+ .circle-copy .actions{justify-content:center}
+ .circle-trust{flex-direction:column;text-align:center;gap:8px}
+ .custom{grid-template-columns:minmax(0,1fr);gap:24px}
+ .custom-mark{right:0}
+}
+@media(max-width:600px){
+ html{scroll-padding-top:24px}
+ .wrap{width:calc(100% - 32px)}
+ .header{display:grid;grid-template-columns:minmax(0,1fr) auto 44px;gap:10px;padding:18px 16px}
+ .header .brand{margin:0;gap:8px;font-size:18px;min-width:0}
+ .header .brand img{width:32px;height:32px}
+ .header .sign-in{grid-column:2;grid-row:1;min-height:44px;gap:5px;padding:9px}
+ .header .menu-toggle{grid-column:3;grid-row:1;width:44px;height:44px}
+ .header nav{grid-column:1/-1;width:100%;text-align:center}
+ .header nav a{min-height:44px;display:flex;align-items:center;justify-content:center}
+ .hero{padding-top:32px;gap:14px}
+ .hero h1{font-size:clamp(36px,9.6vw,54px);letter-spacing:-1.8px;text-wrap:balance}
+ .eyebrow{flex-wrap:wrap;line-height:1.8}
+ .hero .eyebrow{max-width:34ch;margin-inline:auto}
+ .hero .actions,.closing .actions,.circle-copy .actions{flex-direction:column;width:100%;gap:12px}
+ .actions .button{width:100%;max-width:340px;min-height:48px;white-space:normal;text-align:center;align-self:center}
+ .actions .text-link{display:inline-flex;min-height:44px;align-items:center;justify-content:center}
+ .hero-description,.principle>p{max-width:36ch;margin-inline:auto}
+ .hero-scene{width:100%;max-width:100%;min-width:0;margin-top:15px;overflow:clip}
+ .hero-dashboard{transform:none;text-align:left}
+ .mini-nav{display:none}
+ .mini-content{width:100%;padding:14px}
+ .mini-heading small{font-size:8px}
+ .mini-heading h2{font-size:18px}
+ .mini-stats small{font-size:10px}
+ .mini-stats .up,.mini-stats .purple{font-size:9px;line-height:1.5}
+ .mini-graph>div{font-size:10px;gap:8px;flex-wrap:wrap}
+ .mini-graph span{font-size:8px}
+ .mini-task{font-size:10px;flex-wrap:wrap}
+ .tag{font-size:8px}
+ .floating-pill{max-width:calc(100% - 20px)}
+ .hero-bottom{gap:15px;align-items:center}
+ .hero-bottom>span{max-width:25ch;text-align:left}
+ .principle{padding-top:52px}
+ .principle h2,.center-heading h2,.closing h2,.section-heading h2,.stories-heading h2,.circle-copy h2{font-size:clamp(29px,8.5vw,40px);text-wrap:balance}
+ .capability-strip{justify-content:center}
+ .features{gap:18px}
+ .feature{text-align:center;padding:26px 22px;min-width:0}
+ .feature .eyebrow{justify-content:center;font-size:9px;line-height:1.8}
+ .feature .icon-box{margin-inline:auto}
+ .feature h3{font-size:29px;text-wrap:balance}
+ .feature-copy>p,.feature>p{margin-inline:auto}
+ .workflow-visual{min-width:0;text-align:left}
+ .workflow-card{gap:8px;flex-wrap:wrap}
+ .workflow-card.offset{margin-left:10px}
+ .payment-note{flex-wrap:wrap;justify-content:center;gap:8px}
+ .allocation{justify-content:center;flex-wrap:wrap}
+ .schedule{text-align:left}
+ .product-section{padding-top:56px}
+ .preview-controls{flex-wrap:wrap;justify-content:center}
+ .preview-controls button{min-height:44px;flex:1 1 90px;font-size:10px}
+ .product-window,.product-main,.preview-bottom>*{min-width:0}
+ .product-heading{text-align:center}
+ .product-heading small{line-height:1.7}
+ .preview-metrics{grid-template-columns:minmax(0,1fr);gap:10px}
+ .preview-metrics>div{padding:16px;text-align:center}
+ .preview-metrics small{font-size:11px;min-height:0}
+ .preview-metrics b{font-size:29px}
+ .preview-metrics span{font-size:10px}
+ .product-main .focus-card{text-align:left}
+ .insight-card{text-align:center}
+ .insight-icon{margin-inline:auto}
+ .preview-caption{font-size:10px;line-height:1.8}
+ .benefits{text-align:center;padding-block:40px 50px}
+ .benefits p{margin-inline:auto}
+ .circle-section{padding:27px 16px;gap:28px}
+ .circle-demo-top{justify-content:center;text-align:center}
+ .circle-owner{flex-wrap:wrap;justify-content:center;text-align:center}
+ .circle-owner .circle-badge{margin-left:0}
+ .circle-member{display:grid;grid-template-columns:37px minmax(0,1fr);text-align:left}
+ .circle-member>div{min-width:0}
+ .circle-member .circle-badge{grid-column:2;justify-self:start;margin-left:0}
+ .circle-role-picker button{min-width:0;min-height:44px}
+ .circle-flow{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));text-align:center}
+ .circle-flow i{display:none}
+ .circle-demo-message p{min-width:0}
+ .stories{padding-top:54px}
+ .story-card{text-align:center;padding:26px 22px}
+ .story-persona{justify-content:center;flex-direction:column}
+ .plans .plan{padding:30px 22px}
+ .plan ul{padding-left:0}
+ .plan li{text-align:center;line-height:1.7}
+ .custom-plan-benefits li{justify-content:center}
+ .pricing-notice{justify-content:center;flex-wrap:wrap;text-align:center;line-height:1.7}
+ .pricing-notice>span:last-child{border:0}
+ .pricing-footnote{font-size:11px}
+ .custom{padding:30px 22px}
+ .custom h2{font-size:clamp(30px,9vw,38px)}
+ .faq-list{text-align:left}
+ .faq-list summary{min-height:52px;gap:12px}
+ .faq-list summary span{flex-shrink:0}
+ .closing{padding-block:65px}
+ .footer{text-align:center;padding-bottom:75px}
+ .footer .brand,.footer-links{justify-content:center}
+ .footer-links a{display:inline-flex;min-height:44px;align-items:center}
+ .footer-bottom{align-items:center;line-height:1.8}
+ dialog{max-width:calc(100% - 32px);padding:28px 22px}
+ dialog .button{white-space:normal;width:100%}
+ .motion-toggle{min-height:40px;bottom:max(10px,env(safe-area-inset-bottom));right:max(10px,env(safe-area-inset-right))}
+}
