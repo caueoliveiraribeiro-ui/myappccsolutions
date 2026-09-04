@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react"
 import { AnimatePresence, motion, useReducedMotion } from "motion/react"
-import { ArrowUp, Bot, CheckCircle2, ChevronRight, LifeBuoy, LockKeyhole, MessageCircleMore, Minimize2, RotateCcw, ShieldCheck, Sparkles, UserRound } from "lucide-react"
+import { ArrowUp, CheckCircle2, ChevronRight, LifeBuoy, LockKeyhole, MessageCircleMore, Minimize2, RotateCcw, ShieldCheck, Sparkles, UserRound } from "lucide-react"
 import { orbitEase } from "@/components/motion-ui"
 
 type Message = {
@@ -226,8 +226,8 @@ export function OrbitSupportChat() {
                     <Sparkles size={23} /><span className="absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full border-2 border-[#07101d] bg-emerald-400" />
                   </motion.div>
                   <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2"><h2 className="truncate text-[15px] font-semibold tracking-tight">Orbit Assistant</h2><span className="rounded-full border border-cyan-300/20 bg-cyan-300/10 px-2 py-0.5 text-[10px] font-medium text-cyan-100">Knowledge mode</span></div>
-                    <p className="mt-1 text-xs text-slate-400">{authenticated ? "Connected to Orbit Support" : "Native Orbit support · AI-ready"}</p>
+                    <h2 className="truncate text-[15px] font-semibold tracking-tight">Orbit Support</h2>
+                    <p className="mt-1 text-xs text-slate-400">{authenticated ? "Connected to your Orbit account" : "Help when you need it"}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-1">
@@ -258,7 +258,7 @@ export function OrbitSupportChat() {
                   <div key={message.id} className={message.role === "user" ? "flex justify-end" : "flex justify-start"}>
                     <div className={message.role === "user" ? "max-w-[84%]" : "max-w-[92%]"}>
                       <div className={message.role === "user" ? "rounded-[20px] rounded-br-md bg-cyan-300 px-4 py-3 text-sm leading-6 text-slate-950" : message.sender === "support_agent" ? "rounded-[20px] rounded-bl-md border border-emerald-300/20 bg-emerald-300/[.08] px-4 py-3 text-sm leading-6 text-emerald-50" : "rounded-[20px] rounded-bl-md border border-white/8 bg-white/[.055] px-4 py-3 text-sm leading-6 text-slate-200"}>
-                        {message.role === "assistant" && <div className="mb-2 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[.16em] text-cyan-200/75"><Bot size={13}/>{message.sender === "support_agent" ? "Orbit Support" : "Orbit"}</div>}
+                        {message.role === "assistant" && <div className="mb-2 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[.16em] text-cyan-200/75"><MessageCircleMore size={13}/>{message.sender === "support_agent" ? "Orbit Support" : "Orbit"}</div>}
                         <p className="whitespace-pre-wrap">{message.content}</p>
                       </div>
                       {message.role === "assistant" && message.suggestions?.length ? <div className="mt-2 flex flex-wrap gap-1.5">{message.suggestions.map((suggestion) => <button key={suggestion} type="button" onClick={() => void sendMessage(suggestion)} className="rounded-full border border-cyan-300/15 bg-cyan-300/[.055] px-2.5 py-1.5 text-[11px] text-cyan-100/85">{suggestion}</button>)}</div> : null}
@@ -266,7 +266,7 @@ export function OrbitSupportChat() {
                     </div>
                   </div>
                 ))}
-                {sending && <div className="flex justify-start"><div className="flex items-center gap-2 rounded-[20px] rounded-bl-md border border-white/8 bg-white/[.055] px-4 py-3 text-xs text-slate-400"><span className="flex gap-1">{[0,1,2].map((index)=><motion.span key={index} animate={reduce?undefined:{opacity:[.3,1,.3],y:[0,-2,0]}} transition={{duration:1,repeat:Infinity,delay:index*.14}} className="h-1.5 w-1.5 rounded-full bg-cyan-300"/>)}</span>Orbit is thinking</div></div>}
+                {sending && <div className="flex justify-start"><div className="flex items-center gap-2 rounded-[20px] rounded-bl-md border border-white/8 bg-white/[.055] px-4 py-3 text-xs text-slate-400"><span className="flex gap-1">{[0,1,2].map((index)=><motion.span key={index} animate={reduce?undefined:{opacity:[.3,1,.3],y:[0,-2,0]}} transition={{duration:1,repeat:Infinity,delay:index*.14}} className="h-1.5 w-1.5 rounded-full bg-cyan-300"/>)}</span>Orbit is replying</div></div>}
                 <div ref={endRef}/>
               </div>
             </div>
@@ -276,7 +276,7 @@ export function OrbitSupportChat() {
                 <textarea ref={inputRef} value={draft} onChange={(e)=>setDraft(e.target.value.slice(0,2000))} onKeyDown={(e)=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();if(draft.trim())void sendMessage(draft)}}} rows={1} maxLength={2000} placeholder="Ask Orbit anything…" aria-label="Message Orbit Support" className="max-h-28 min-h-[46px] w-full resize-none bg-transparent px-2 py-2 text-sm text-white outline-none placeholder:text-slate-500"/>
                 <div className="flex items-center justify-between gap-3 px-1 pb-1"><span className="flex items-center gap-1.5 text-[10px] text-slate-500"><ShieldCheck size={12}/> Don’t share passwords or private keys</span><button type="submit" disabled={sending||!draft.trim()} aria-label="Send message" className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-cyan-300 text-slate-950 disabled:opacity-40"><ArrowUp size={18}/></button></div>
               </form>
-              <div className="mt-2 flex items-center justify-center gap-1.5 text-[10px] text-slate-600"><CheckCircle2 size={11}/>{authenticated && conversationId ? "Conversation synced with Orbit Support" : "Native Orbit support · provider keys stay server-side"}</div>
+              <div className="mt-2 flex items-center justify-center gap-1.5 text-[10px] text-slate-600"><CheckCircle2 size={11}/>{authenticated && conversationId ? "Conversation synced with Orbit Support" : "Secure Orbit support"}</div>
             </div>
           </motion.section>
         )}
