@@ -45,10 +45,7 @@ export default async function Subscribe({
       <main className="min-h-screen bg-[#050812] p-10 text-white">
         <h1 className="text-3xl">Choose your Orbit</h1>
         <p className="my-5">Select a plan to continue to secure checkout.</p>
-        <a
-          className="text-cyan-300"
-          href="https://orbit-landing-page-rose.vercel.app/#plans"
-        >
+        <a className="text-cyan-300" href="/plans">
           Explore plans →
         </a>
       </main>
