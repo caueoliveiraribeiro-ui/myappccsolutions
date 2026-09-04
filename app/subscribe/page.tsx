@@ -1,8 +1,8 @@
 import { cookies } from "next/headers"
-import { redirect } from "next/navigation"
 import { getSession } from "@/lib/auth"
 import { accountAccess } from "@/lib/plan-access"
 import { StripeSubscription } from "@/components/stripe-subscription"
+import { HotmartSubscription } from "@/components/hotmart-subscription"
 import {
   isStripePlan,
   isSubscriptionPlan,
@@ -16,6 +16,12 @@ const hotmartCheckouts = {
   personal: "https://pay.hotmart.com/G107468574F?off=fcv6cun6",
   small_business: "https://pay.hotmart.com/G107468574F?off=qks1vkpc",
   big_business: "https://pay.hotmart.com/G107468574F?off=n37sgoia",
+} as const
+
+const hotmartPrices = {
+  personal: "$29.99",
+  small_business: "$99.99",
+  big_business: "$189.99",
 } as const
 
 function formatStripeAmount(unitAmount: number, currency: string) {
@@ -59,20 +65,29 @@ export default async function Subscribe({
     )
   }
 
-  const hotmartCheckout = hotmartCheckouts[plan as keyof typeof hotmartCheckouts]
-  if (hotmartCheckout) redirect(hotmartCheckout)
-
   const token = (await cookies()).get("orbit_session")?.value
   const user = token ? await getSession(token) : null
-  const ready = stripeBillingReady()
 
   let owner = false
-  let formattedPrice: string | undefined
-
   if (user) {
     const access = await accountAccess(user.id)
     owner = access.plan === "owner"
   }
+
+  if (isSubscriptionPlan(plan)) {
+    return (
+      <HotmartSubscription
+        name={stripeOffers[plan].name}
+        formattedPrice={hotmartPrices[plan]}
+        checkoutUrl={hotmartCheckouts[plan]}
+        email={user?.email}
+        owner={owner}
+      />
+    )
+  }
+
+  const ready = stripeBillingReady()
+  let formattedPrice: string | undefined
 
   if (ready) {
     try {
@@ -85,14 +100,12 @@ export default async function Subscribe({
     }
   }
 
-  const subscription = isSubscriptionPlan(plan)
-
   return (
     <StripeSubscription
       plan={plan}
       name={stripeOffers[plan].name}
       formattedPrice={formattedPrice}
-      billingMode={subscription ? "subscription" : "payment"}
+      billingMode="payment"
       email={user?.email}
       ready={ready}
       owner={owner}
