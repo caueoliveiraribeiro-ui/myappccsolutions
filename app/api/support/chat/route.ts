@@ -21,7 +21,6 @@ export async function POST(req: NextRequest) {
 
   const token = (await cookies()).get("orbit_session")?.value
   const user = token ? await getSession(token) : null
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   const length = Number(req.headers.get("content-length") || 0)
   if (length > MAX_BODY_BYTES) return NextResponse.json({ error: "Request too large" }, { status: 413 })
@@ -39,7 +38,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Message must be between 1 and 2000 characters" }, { status: 400 })
   }
 
-  const rawContext = data.context && typeof data.context === "object" ? (data.context as Record<string, unknown>) : {}
+  // Public visitors can use the safe first-party knowledge layer. Account-derived
+  // context is accepted only when the requester has a valid Orbit session.
+  const rawContext = user && data.context && typeof data.context === "object"
+    ? (data.context as Record<string, unknown>)
+    : {}
+
   const context: OrbitSupportContext = {
     page: typeof rawContext.page === "string" ? rawContext.page.slice(0, 80) : undefined,
     plan: typeof rawContext.plan === "string" ? rawContext.plan.slice(0, 80) : undefined,
@@ -50,7 +54,10 @@ export async function POST(req: NextRequest) {
 
   try {
     const result = await answerOrbitSupport(message, context)
-    return NextResponse.json(result, { headers: { "Cache-Control": "no-store" } })
+    return NextResponse.json(
+      { ...result, authenticated: Boolean(user) },
+      { headers: { "Cache-Control": "no-store" } },
+    )
   } catch (error) {
     console.error("Orbit support agent failed", error)
     return NextResponse.json({ error: "Orbit Support is temporarily unavailable" }, { status: 503 })
