@@ -39,11 +39,14 @@ export async function GET(request: NextRequest) {
   );
 
   const state = randomBytes(32).toString("hex");
+  const requestedReturn = request.nextUrl.searchParams.get("return");
+  const returnTo = requestedReturn === "leads" ? "leads" : "dashboard";
 
   const context = Buffer.from(
     JSON.stringify({
       userId: session.id,
       state,
+      returnTo,
       expires: Date.now() + 10 * 60 * 1000,
     })
   ).toString("base64url");
@@ -55,11 +58,11 @@ export async function GET(request: NextRequest) {
     prompt: "consent",
     state,
     scope: [
-  "https://www.googleapis.com/auth/gmail.send",
-  "https://www.googleapis.com/auth/calendar.events",
-  "openid",
-  "email",
-],
+      "https://www.googleapis.com/auth/gmail.send",
+      "https://www.googleapis.com/auth/calendar.events",
+      "openid",
+      "email",
+    ],
   });
 
   const response = NextResponse.redirect(authorizationUrl);
