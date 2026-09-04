@@ -1,5 +1,8 @@
 allowBuilds:
   sharp: true
+
+minimumReleaseAgeExclude:
+  - resend@6.26.0
+
 onlyBuiltDependencies:
   - sharp
-

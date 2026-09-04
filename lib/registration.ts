@@ -1,7 +1,7 @@
 import {createHash,createHmac,randomBytes} from "node:crypto"
 import {db} from "@/lib/supabase"
 import {hashUserPassword} from "@/lib/auth"
-export const APP_ORIGIN="https://orbit-lifemanagement.vercel.app"
+export const APP_ORIGIN="https://orbit-lm.com"
 export const genericRegistrationMessage="If this email can be registered, a verification link is on its way. Check your inbox and spam folder. Already registered? Sign in instead."
 export function tokenHash(value:string){return createHash("sha256").update(value).digest("hex")}
 export async function requestRegistration(request:Request){
