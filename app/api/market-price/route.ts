@@ -46,7 +46,22 @@ function stockCurrency(symbol: string) {
   }
   return Object.entries(suffixes).find(([suffix]) => symbol.endsWith(suffix))?.[1] || "USD"
 }
+function candidateSymbols(symbol: string) {
+  const normalized = symbol.trim().toUpperCase();
 
+  // User already entered the Brazilian Yahoo suffix.
+  if (normalized.endsWith(".SA")) {
+    return [normalized, normalized.slice(0, -3)];
+  }
+
+  // Brazilian B3 ticker patterns:
+  // PETR4, VALE3, MXRF11, HGLG11, etc.
+  if (/^[A-Z]{4}\d{1,2}$/.test(normalized)) {
+    return [`${normalized}.SA`, normalized];
+  }
+
+  return [normalized];
+}
 function yahooSymbol(symbol: string) {
   const suffixes: Record<string, string> = {
     ".SAO": ".SA", ".LON": ".L", ".TRT": ".TO", ".TOR": ".TO", ".AUS": ".AX",
@@ -111,43 +126,144 @@ const cachedYahooStock=unstable_cache(yahooStock,["orbit-yahoo-stock-v1"],{reval
 const stockPending=new Map<string,Promise<Quote>>()
 async function sharedYahooStock(symbol:string){const existing=stockPending.get(symbol);if(existing)return existing;const pending=cachedYahooStock(symbol).finally(()=>stockPending.delete(symbol));stockPending.set(symbol,pending);return pending}
 
-export async function GET(request: Request) {const planDenied=await requestFeature(new URL(request.url).searchParams.get("type")==="crypto"?"crypto":"stocks");if(planDenied)return planDenied;
-  if (!await authorized()) return NextResponse.json({ error: "Your session expired. Please sign in again." }, { status: 401 })
+export async function GET(request: Request) {
+  const planDenied = await requestFeature(
+    new URL(request.url).searchParams.get("type") === "crypto"
+      ? "crypto"
+      : "stocks"
+  )
+
+  if (planDenied) return planDenied
+
+  if (!(await authorized())) {
+    return NextResponse.json(
+      { error: "Your session expired. Please sign in again." },
+      { status: 401 }
+    )
+  }
+
   const url = new URL(request.url)
   const type = url.searchParams.get("type")
-  const symbol = (url.searchParams.get("symbol") || "").trim().toUpperCase()
-  const currency = (url.searchParams.get("currency") || "USD").toUpperCase()
+  const symbol = (url.searchParams.get("symbol") || "")
+    .trim()
+    .toUpperCase()
 
-  if (!symbol || !["stock", "crypto"].includes(type || "")) return NextResponse.json({ error: "Enter a stock or crypto symbol." }, { status: 400 })
-  if (!allowed.has(currency)) return NextResponse.json({ error: "Choose a supported currency in Settings." }, { status: 400 })
+  const currency = (url.searchParams.get("currency") || "USD")
+    .toUpperCase()
+
+  if (!symbol || !["stock", "crypto"].includes(type || "")) {
+    return NextResponse.json(
+      { error: "Enter a stock or crypto symbol." },
+      { status: 400 }
+    )
+  }
+
+  if (!allowed.has(currency)) {
+    return NextResponse.json(
+      { error: "Choose a supported currency in Settings." },
+      { status: 400 }
+    )
+  }
 
   const cacheKey = `${type}:${symbol}:${currency}`
   const cached = quotes.get(cacheKey)
-  if (cached && cached.until > Date.now()) return NextResponse.json(cached.data)
+
+  if (cached && cached.until > Date.now()) {
+    return NextResponse.json(cached.data)
+  }
 
   try {
-    let base: Quote
+    let base: Quote | null = null
+
     if (type === "stock") {
-      try {
-        base = await sharedYahooStock(symbol)
-      } catch {
+      // Try Yahoo using all possible ticker formats first.
+      for (const candidate of candidateSymbols(symbol)) {
+        try {
+          base = await sharedYahooStock(candidate)
+          break
+        } catch {
+          // Try the next candidate.
+        }
+      }
+
+      // Only use Alpha Vantage if Yahoo could not find any candidate.
+      if (!base) {
         try {
           base = await alphaStock(symbol)
         } catch (error) {
-          if(error instanceof MarketProviderError) throw error
-          return NextResponse.json({ error: "We could not find this stock, ETF or fund right now. Check the ticker and market suffix, or enter the purchase price manually." }, { status: 404 })
+          if (error instanceof MarketProviderError) {
+            throw error
+          }
+
+          return NextResponse.json(
+            {
+              error:
+                "We could not find this stock, ETF or fund right now. Check the ticker and market suffix, or enter the purchase price manually.",
+            },
+            { status: 404 }
+          )
         }
       }
     } else {
       base = await cryptoQuote(symbol)
     }
 
-    const fx = await convert(base.price, base.currency, currency)
-    const result = { ...base, originalPrice: base.price, originalCurrency: base.currency, price: fx.price, currency, exchangeRate: fx.rate }
-    quotes.set(cacheKey, { until: Date.now() + (type === "stock" ? 300000 : 60000), data: result })
+    if (!base) {
+      return NextResponse.json(
+        {
+          error:
+            "We could not find this stock, ETF or fund right now.",
+        },
+        { status: 404 }
+      )
+    }
+
+    const fx = await convert(
+      base.price,
+      base.currency,
+      currency
+    )
+
+    const result = {
+      ...base,
+      originalPrice: base.price,
+      originalCurrency: base.currency,
+      price: fx.price,
+      currency,
+      exchangeRate: fx.rate,
+    }
+
+    quotes.set(cacheKey, {
+      until:
+        Date.now() +
+        (type === "stock" ? 300000 : 60000),
+      data: result,
+    })
+
     return NextResponse.json(result)
   } catch (error) {
-    if(error instanceof MarketProviderError)return NextResponse.json({error:error.message},{status:error.status,headers:error.retryAfter?{"Retry-After":String(error.retryAfter)}:undefined})
-    return NextResponse.json({ error: error instanceof Error ? error.message : "We could not load the price right now." }, { status: 502 })
+    if (error instanceof MarketProviderError) {
+      return NextResponse.json(
+        { error: error.message },
+        {
+          status: error.status,
+          headers: error.retryAfter
+            ? {
+                "Retry-After": String(error.retryAfter),
+              }
+            : undefined,
+        }
+      )
+    }
+
+    return NextResponse.json(
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "We could not load the price right now.",
+      },
+      { status: 502 }
+    )
   }
 }
