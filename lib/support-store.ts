@@ -2,11 +2,16 @@ import { db } from "@/lib/supabase"
 
 export type SupportSender = "user" | "orbit_ai" | "support_agent" | "system"
 
-export async function getOrCreateOpenConversation(userId: string, subject = "Orbit Support") {
-  const existing = await db(
+export async function getOpenConversation(userId: string) {
+  const rows = await db(
     `support_conversations?user_id=eq.${encodeURIComponent(userId)}&status=in.(open,pending)&select=id,user_id,status,subject,human_requested,ai_enabled,last_message_at,created_at,updated_at&order=last_message_at.desc&limit=1`,
   )
-  if (existing?.[0]) return existing[0]
+  return rows?.[0] || null
+}
+
+export async function getOrCreateOpenConversation(userId: string, subject = "Orbit Support") {
+  const existing = await getOpenConversation(userId)
+  if (existing) return existing
 
   const created = await db("support_conversations", {
     method: "POST",
@@ -31,6 +36,14 @@ export async function markHumanRequested(conversationId: string) {
   await db(`support_conversations?id=eq.${encodeURIComponent(conversationId)}`, {
     method: "PATCH",
     body: JSON.stringify({ human_requested: true, status: "pending", updated_at: new Date().toISOString() }),
+  })
+}
+
+export async function resolveOpenConversations(userId: string) {
+  const now = new Date().toISOString()
+  await db(`support_conversations?user_id=eq.${encodeURIComponent(userId)}&status=in.(open,pending)`, {
+    method: "PATCH",
+    body: JSON.stringify({ status: "resolved", human_requested: false, updated_at: now }),
   })
 }
 
