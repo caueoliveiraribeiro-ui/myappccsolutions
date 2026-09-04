@@ -22,7 +22,7 @@ const featureCards = [
 ] as const
 
 const SHOW_LOGIN_PLANS = false
-const LANDING_PLANS_URL = "https://orbit-lm.com/plans"
+const LANDING_PLANS_URL = "/plans"
 const plans = [
   {name:"Personal",usd:29.99,referenceUsd:39.99,eyebrow:"Build your foundation",icon:Target,description:"A beautiful command center for your money, investments and everyday life.",features:["Overview dashboard","Stocks","Expenses","Groceries","Calendar","Projects","Subscription management"],accent:"cyan",featured:false},
   {name:"Small Business",usd:99.99,referenceUsd:149.99,eyebrow:"Turn momentum into growth",icon:Zap,description:"Connect your personal system to the work, clients and projects moving your business forward.",features:["Everything in Personal","Crypto","History","Reports","Lead management","Sales pipeline","100 live leads","50 archived leads","Up to 50 clients"],accent:"violet",featured:true},
