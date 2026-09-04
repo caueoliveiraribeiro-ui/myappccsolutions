@@ -45,10 +45,11 @@
     "cmdk": "1.0.4",
     "date-fns": "4.1.0",
     "embla-carousel-react": "8.5.1",
+    "googleapis": "^178.0.0",
     "input-otp": "1.4.1",
     "lucide-react": "^0.454.0",
     "motion": "13.2.0",
-    "next": "15.5.18",
+    "next": "^15.5.25",
     "next-themes": "^0.4.6",
     "react": "^19",
     "react-day-picker": "9.8.0",
@@ -57,6 +58,7 @@
     "react-resizable-panels": "^2.1.7",
     "read-excel-file": "9.3.10",
     "recharts": "2.15.4",
+    "resend": "^6.26.0",
     "sonner": "^1.7.4",
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",
@@ -74,4 +76,3 @@
     "typescript": "^5"
   }
 }
-
