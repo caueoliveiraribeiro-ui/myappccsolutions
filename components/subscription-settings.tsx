@@ -13,7 +13,6 @@ import {
   Search,
   ShieldCheck,
   Sparkles,
-  UserCog,
   UserRoundCheck,
 } from "lucide-react"
 
@@ -109,16 +108,16 @@ export function SubscriptionSettings({ me }: { me: Record<string, any> }) {
     setBusy(true)
     setMessage("")
     try {
-      const r = await fetch("/api/auth/forgot-password", {
+      const r = await fetch("/api/admin/password-reset", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ email: account.email }),
       })
       const d = await r.json()
-      if (!r.ok) throw Error(d.error || "Could not request a password reset.")
-      setMessage("Password-reset request accepted. If the account is eligible, Orbit sent a secure reset email.")
+      if (!r.ok) throw Error(d.error || "Could not send the password reset email.")
+      setMessage(d.message || `Password reset email sent to ${account.email}.`)
     } catch (e) {
-      setMessage(e instanceof Error ? e.message : "Could not request a password reset.")
+      setMessage(e instanceof Error ? e.message : "Could not send the password reset email.")
     } finally {
       setBusy(false)
     }
