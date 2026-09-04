@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { cookies } from "next/headers"
 import { getSession } from "@/lib/auth"
 import { ownerAccountIds } from "@/lib/plan-access"
-import { issuePasswordReset, validEmail } from "@/lib/password-reset"
+import { issuePasswordReset, resendEmailStatus, validEmail } from "@/lib/password-reset"
 
 async function owner() {
   const token = (await cookies()).get("orbit_session")?.value
@@ -34,7 +34,31 @@ export async function POST(request: Request) {
 
     const result = await issuePasswordReset(email, { bypassPublicRate: true })
     if (result.ok) {
-      return NextResponse.json({ ok: true, message: `Password reset email sent to ${result.email}.` })
+      let deliveryStatus: string | null = null
+      if (result.resendId) {
+        await new Promise((resolve) => setTimeout(resolve, 900))
+        deliveryStatus = await resendEmailStatus(result.resendId)
+      }
+
+      if (["bounced", "complained", "suppressed", "canceled"].includes(deliveryStatus || "")) {
+        console.error("ORBIT_ADMIN_PASSWORD_RESET_DELIVERY_FAILED:", result.resendId || "", deliveryStatus)
+        return NextResponse.json(
+          {
+            error: `Resend accepted the reset email but its delivery status is ${deliveryStatus}. Check the recipient and Resend delivery details.`,
+            resendId: result.resendId,
+            deliveryStatus,
+          },
+          { status: 502 },
+        )
+      }
+
+      const statusText = deliveryStatus ? ` Current Resend status: ${deliveryStatus}.` : ""
+      return NextResponse.json({
+        ok: true,
+        message: `Password reset email accepted for ${result.email}.${statusText}`,
+        resendId: result.resendId,
+        deliveryStatus,
+      })
     }
 
     if (result.code === "not_found") {
@@ -49,6 +73,10 @@ export async function POST(request: Request) {
     if (result.code === "email_failed") {
       console.error("ORBIT_ADMIN_PASSWORD_RESET_EMAIL_FAILED:", result.detail || "")
       return NextResponse.json({ error: "Resend rejected the password-reset email. Check the server logs for details." }, { status: 502 })
+    }
+    if (result.code === "database_failed") {
+      console.error("ORBIT_ADMIN_PASSWORD_RESET_DATABASE_FAILED:", result.detail || "")
+      return NextResponse.json({ error: "The password-reset database tables are not available or could not be updated." }, { status: 503 })
     }
 
     console.error("ORBIT_ADMIN_PASSWORD_RESET_FAILED:", result.code, result.detail || "")
