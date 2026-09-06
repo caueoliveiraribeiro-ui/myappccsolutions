@@ -32,6 +32,7 @@ export function LeadDirectoryEmailControls() {
     const shouldOpenLeads = window.location.pathname === "/dashboard" && params.get("view") === "leads"
     const gmailStatus = params.get("gmail")
     let openedLeads = false
+    let scanTimer: number | null = null
 
     const locate = () => {
       if (shouldOpenLeads && !openedLeads) {
@@ -59,7 +60,6 @@ export function LeadDirectoryEmailControls() {
       const panel = heading.closest("[data-slot='card']") || heading.parentElement?.parentElement
       if (!(panel instanceof HTMLElement)) return
 
-      // Clean up the old duplicated inline controls if a previous render left them behind.
       panel.querySelectorAll("[data-orbit-lead-inline-email-controls='true']").forEach((node) => node.remove())
 
       let slot = panel.querySelector<HTMLElement>("[data-orbit-lead-email-controls='true']")
@@ -81,13 +81,34 @@ export function LeadDirectoryEmailControls() {
       })
     }
 
+    const schedule = (delay = 100) => {
+      if (scanTimer) window.clearTimeout(scanTimer)
+      scanTimer = window.setTimeout(() => {
+        scanTimer = null
+        locate()
+      }, delay)
+    }
+
     locate()
-    const observer = new MutationObserver(locate)
-    observer.observe(document.body, { childList: true, subtree: true })
-    const timer = window.setInterval(locate, 750)
+    // Avoid a whole-document MutationObserver. Route/tab clicks and a bounded
+    // interval are enough to discover the Lead directory without rescanning
+    // on every React animation or portal mutation.
+    const interval = window.setInterval(locate, 1800)
+    const onClick = () => {
+      schedule(100)
+      window.setTimeout(() => schedule(60), 420)
+    }
+    const onFocus = () => {
+      void refreshStatus()
+      schedule(50)
+    }
+    document.addEventListener("click", onClick, true)
+    window.addEventListener("focus", onFocus)
     return () => {
-      observer.disconnect()
-      window.clearInterval(timer)
+      window.clearInterval(interval)
+      if (scanTimer) window.clearTimeout(scanTimer)
+      document.removeEventListener("click", onClick, true)
+      window.removeEventListener("focus", onFocus)
     }
   }, [status.connected])
 

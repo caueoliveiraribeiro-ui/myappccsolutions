@@ -77,68 +77,73 @@ export function CrmEmailActions() {
   }, [])
 
   useEffect(() => {
+    let scanTimer: number | null = null
+
     const scan = () => {
       const next: EmailTarget[] = []
+      const pageTitle = (document.querySelector("h1")?.textContent || "").trim()
 
       // Clients → Client directory → each client dropdown.
-      const clientHeading = Array.from(document.querySelectorAll("h2")).find(
-        (node) => node.textContent?.trim() === "Client directory",
-      )
-      const clientPanel = clientHeading?.closest("[data-slot='card']") || clientHeading?.parentElement?.parentElement
-      if (clientPanel instanceof HTMLElement) {
-        clientPanel.querySelectorAll<HTMLFormElement>("details form").forEach((form, index) => {
-          const id = `client-${index}`
-          const slot = addSlot(form, id, "client")
-          if (slot) next.push({ id, slot, form, kind: "client" })
-        })
+      if (pageTitle === "Clients") {
+        const clientHeading = Array.from(document.querySelectorAll("h2")).find(
+          (node) => node.textContent?.trim() === "Client directory",
+        )
+        const clientPanel = clientHeading?.closest("[data-slot='card']") || clientHeading?.parentElement?.parentElement
+        if (clientPanel instanceof HTMLElement) {
+          clientPanel.querySelectorAll<HTMLFormElement>("details form").forEach((form, index) => {
+            const id = `client-${index}`
+            const slot = addSlot(form, id, "client")
+            if (slot) next.push({ id, slot, form, kind: "client" })
+          })
+        }
       }
 
-      // Pipeline → Lead history → each lead/client history dropdown.
-      const pipelineHeading = Array.from(document.querySelectorAll("h2")).find(
-        (node) => node.textContent?.trim() === "Lead history",
-      )
-      const pipelinePanel = pipelineHeading?.closest("[data-slot='card']") || pipelineHeading?.parentElement?.parentElement
-      if (pipelinePanel instanceof HTMLElement) {
-        pipelinePanel.querySelectorAll<HTMLFormElement>("details form").forEach((form, index) => {
-          // Move Description once so the stable order is Status → Description → Management notes.
-          // The previous unconditional DOM move retriggered MutationObserver continuously and could lock the Pipeline tab.
-          const description = form.querySelector<HTMLTextAreaElement>('textarea[name="description"]')?.closest("label")
-          const notes = form.querySelector<HTMLTextAreaElement>('textarea[name="notes"]')?.closest("label")
-          const status = form.querySelector<HTMLSelectElement>('select[name="status"]')?.closest("label")
-          if (
-            description &&
-            notes &&
-            status &&
-            description.parentElement === notes.parentElement &&
-            description.parentElement === status.parentElement &&
-            status.nextElementSibling !== description
-          ) {
-            status.insertAdjacentElement("afterend", description)
-          }
+      // Pipeline → Lead history only.
+      if (pageTitle === "Pipeline") {
+        const pipelineHeading = Array.from(document.querySelectorAll("h2")).find(
+          (node) => node.textContent?.trim() === "Lead history",
+        )
+        const pipelinePanel = pipelineHeading?.closest("[data-slot='card']") || pipelineHeading?.parentElement?.parentElement
+        if (pipelinePanel instanceof HTMLElement) {
+          pipelinePanel.querySelectorAll<HTMLFormElement>("details form").forEach((form, index) => {
+            // Stable visual order: Status → Description → Management notes.
+            const description = form.querySelector<HTMLTextAreaElement>('textarea[name="description"]')?.closest("label")
+            const notes = form.querySelector<HTMLTextAreaElement>('textarea[name="notes"]')?.closest("label")
+            const status = form.querySelector<HTMLSelectElement>('select[name="status"]')?.closest("label")
+            if (
+              description && notes && status &&
+              description.parentElement === notes.parentElement &&
+              description.parentElement === status.parentElement &&
+              status.nextElementSibling !== description
+            ) {
+              status.insertAdjacentElement("afterend", description)
+            }
 
-          const id = `pipeline-${index}`
-          const slot = addSlot(form, id, "pipeline")
-          if (slot) next.push({ id, slot, form, kind: "pipeline" })
-        })
+            const id = `pipeline-${index}`
+            const slot = addSlot(form, id, "pipeline")
+            if (slot) next.push({ id, slot, form, kind: "pipeline" })
+          })
+        }
       }
 
       // Projects → active projects and project history dropdowns.
-      document.querySelectorAll<HTMLFormElement>("form").forEach((form, index) => {
-        const isProject = Boolean(
-          form.querySelector('input[name="contact_email"]') &&
-          form.querySelector('select[name="stage"]') &&
-          form.querySelector('input[name="name"]'),
-        )
-        if (!isProject) return
+      if (pageTitle === "Projects") {
+        document.querySelectorAll<HTMLFormElement>("form").forEach((form, index) => {
+          const isProject = Boolean(
+            form.querySelector('input[name="contact_email"]') &&
+            form.querySelector('select[name="stage"]') &&
+            form.querySelector('input[name="name"]'),
+          )
+          if (!isProject) return
 
-        // Payment notes are no longer part of the project information UI.
-        const paymentNotes = form.querySelector<HTMLTextAreaElement>('textarea[name="payment_notes"]')?.closest("label")
-        if (paymentNotes instanceof HTMLElement && !paymentNotes.hidden) paymentNotes.hidden = true
+          const paymentNotes = form.querySelector<HTMLTextAreaElement>('textarea[name="payment_notes"]')?.closest("label")
+          if (paymentNotes instanceof HTMLElement && !paymentNotes.hidden) paymentNotes.hidden = true
 
-        const id = `project-${index}`
-        const slot = addSlot(form, id, "project")
-        if (slot) next.push({ id, slot, form, kind: "project" })
-      })
+          const id = `project-${index}`
+          const slot = addSlot(form, id, "project")
+          if (slot) next.push({ id, slot, form, kind: "project" })
+        })
+      }
 
       setTargets((current) => {
         if (
@@ -149,13 +154,32 @@ export function CrmEmailActions() {
       })
     }
 
+    const schedule = (delay = 100) => {
+      if (scanTimer) window.clearTimeout(scanTimer)
+      scanTimer = window.setTimeout(() => {
+        scanTimer = null
+        scan()
+      }, delay)
+    }
+
     scan()
-    const observer = new MutationObserver(scan)
-    observer.observe(document.body, { childList: true, subtree: true })
-    const timer = window.setInterval(scan, 800)
+    // A global MutationObserver here used to rescan all forms whenever portals,
+    // animations, archive buttons, or investment UI changed. That is exactly the
+    // kind of cross-tab feedback loop that can lock the dashboard. Use bounded,
+    // page-scoped scans triggered by navigation/clicks instead.
+    const interval = window.setInterval(scan, 1800)
+    const onClick = () => {
+      schedule(100)
+      window.setTimeout(() => schedule(60), 420)
+    }
+    const onFocus = () => schedule(50)
+    document.addEventListener("click", onClick, true)
+    window.addEventListener("focus", onFocus)
     return () => {
-      observer.disconnect()
-      window.clearInterval(timer)
+      window.clearInterval(interval)
+      if (scanTimer) window.clearTimeout(scanTimer)
+      document.removeEventListener("click", onClick, true)
+      window.removeEventListener("focus", onFocus)
     }
   }, [])
 
