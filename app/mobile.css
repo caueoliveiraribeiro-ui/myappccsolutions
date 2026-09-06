@@ -1,0 +1,145 @@
+/* Orbit mobile-only refinements.
+   Keep these rules scoped to the authenticated dashboard so desktop and
+   marketing pages remain unchanged. */
+
+@media (max-width: 767px) {
+  .wealth-dashboard {
+    overflow-x: clip;
+  }
+
+  .wealth-dashboard > .relative.flex {
+    gap: 0.5rem;
+    padding: 0.5rem;
+  }
+
+  .wealth-dashboard .orbit-sidebar {
+    inset: 0.5rem !important;
+    width: min(18rem, calc(100vw - 1rem)) !important;
+    max-height: calc(100dvh - 1rem);
+    border-radius: 1.25rem;
+  }
+
+  .wealth-dashboard section.min-w-0.flex-1 > header {
+    gap: 0.75rem;
+    padding: 0.75rem;
+  }
+
+  .wealth-dashboard section.min-w-0.flex-1 > header h1 {
+    font-size: 1.05rem;
+    line-height: 1.35;
+  }
+
+  .wealth-dashboard section.min-w-0.flex-1 > header p {
+    display: none;
+  }
+
+  /* Metric cards keep their hierarchy without consuming most of a phone screen. */
+  .wealth-dashboard .metric-card {
+    padding: 1rem !important;
+  }
+
+  .wealth-dashboard .metric-card b {
+    font-size: 1.25rem;
+    line-height: 1.55rem;
+  }
+
+  /* Recharts becomes illegible when a 6- or 12-month chart is squeezed into
+     a 320–430px viewport. Give the plot a useful minimum canvas and let the
+     user swipe the chart horizontally instead of crushing axes and bars. */
+  .wealth-dashboard .h-56,
+  .wealth-dashboard .h-64,
+  .wealth-dashboard .h-72 {
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 0.25rem;
+  }
+
+  .wealth-dashboard .h-56::-webkit-scrollbar,
+  .wealth-dashboard .h-64::-webkit-scrollbar,
+  .wealth-dashboard .h-72::-webkit-scrollbar {
+    display: none;
+  }
+
+  .wealth-dashboard .h-56 > .recharts-responsive-container {
+    width: 480px !important;
+    min-width: 480px !important;
+  }
+
+  .wealth-dashboard .h-64 > .recharts-responsive-container {
+    width: 520px !important;
+    min-width: 520px !important;
+  }
+
+  .wealth-dashboard .h-72 > .recharts-responsive-container {
+    width: 720px !important;
+    min-width: 720px !important;
+  }
+
+  .wealth-dashboard .recharts-wrapper {
+    touch-action: pan-x pan-y;
+  }
+
+  .wealth-dashboard .recharts-cartesian-axis-tick-value {
+    font-size: 10px;
+  }
+
+  .wealth-dashboard .recharts-default-tooltip {
+    max-width: 230px;
+    border-radius: 12px !important;
+    font-size: 12px;
+  }
+
+  .wealth-dashboard .recharts-tooltip-wrapper {
+    max-width: calc(100vw - 2rem);
+  }
+
+  /* 16px prevents Safari/iOS from zooming the whole dashboard when a field is focused. */
+  .wealth-dashboard input,
+  .wealth-dashboard select,
+  .wealth-dashboard textarea {
+    font-size: 16px;
+  }
+
+  .wealth-dashboard details > summary {
+    min-height: 44px;
+  }
+
+  .wealth-dashboard .current-price-pill {
+    min-height: 2.5rem;
+    white-space: normal;
+  }
+
+  .wealth-dashboard button,
+  .wealth-dashboard a {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* The profile is a full account editor; on phones give the modal almost the
+     full viewport while retaining a safe edge around it. */
+  [aria-label="Orbit user profile"] {
+    padding: 0.5rem !important;
+  }
+
+  [aria-label="Orbit user profile"] > div {
+    border-radius: 1.25rem !important;
+  }
+}
+
+@media (max-width: 380px) {
+  .wealth-dashboard section.min-w-0.flex-1 > header {
+    padding: 0.625rem;
+  }
+
+  .wealth-dashboard .metric-card {
+    padding: 0.875rem !important;
+  }
+
+  .wealth-dashboard .metric-card b {
+    font-size: 1.125rem;
+    line-height: 1.4rem;
+  }
+}
