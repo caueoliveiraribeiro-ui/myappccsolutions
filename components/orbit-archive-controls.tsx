@@ -36,7 +36,7 @@ export function OrbitArchiveControls() {
     if (!r.ok) return toast.error(d.error || "We could not update the archive.")
     toast.success(archived ? `${resource === "clients" ? "Client" : "Project"} archived.` : `${resource === "clients" ? "Client" : "Project"} restored.`)
     await refresh()
-    scheduleScan(30)
+    scheduleScan(40)
   }
 
   function clientFor(form: HTMLFormElement) {
@@ -81,21 +81,30 @@ export function OrbitArchiveControls() {
   function scan() {
     if (document.visibilityState === "hidden") return
 
-    // Hide the redundant owner/admin exact-email lookup without removing React-owned nodes.
-    document.querySelectorAll("section").forEach((section) => {
-      if ((section.textContent || "").includes("Direct account lookup")) {
-        ;(section as HTMLElement).hidden = true
-      }
-    })
-
-    // Keep the field in React's DOM so reconciliation stays stable; only hide it visually.
-    document.querySelectorAll('textarea[name="payment_notes"]').forEach((textarea) => {
-      const label = textarea.closest("label") as HTMLElement | null
-      if (label && !label.hidden) label.hidden = true
-    })
-
+    const title = (document.querySelector("h1")?.textContent || "").trim()
     const clientSearch = document.querySelector('input[placeholder="Search clients"]') as HTMLInputElement | null
-    if (clientSearch) {
+    const onClients = Boolean(clientSearch)
+    const onProjects = title === "Projects"
+    const onSettings = title === "Settings"
+
+    // A project-only header must never survive a tab switch.
+    if (!onProjects) document.querySelector("[data-orbit-project-archive-header]")?.remove()
+
+    // Most Orbit pages (Overview, Stocks, Crypto, Calendar, Reports, etc.) do
+    // not need archive DOM work. Returning here prevents repeated full-form
+    // scans from competing with animated/dynamic tabs.
+    if (!onClients && !onProjects && !onSettings) return
+
+    if (onSettings) {
+      document.querySelectorAll("section").forEach((section) => {
+        if ((section.textContent || "").includes("Direct account lookup")) {
+          ;(section as HTMLElement).hidden = true
+        }
+      })
+      return
+    }
+
+    if (onClients && clientSearch) {
       const controls = clientSearch.closest("div.relative")?.parentElement
       if (controls && !controls.querySelector("[data-orbit-client-archive-trigger]")) {
         const trigger = document.createElement("button")
@@ -109,56 +118,65 @@ export function OrbitArchiveControls() {
       }
       const trigger = controls?.querySelector("[data-orbit-client-archive-trigger]") as HTMLButtonElement | null
       if (trigger) trigger.textContent = `Archived clients (${records.current.clients.filter((row) => row.archived).length}/50)`
-    }
 
-    document.querySelectorAll("form").forEach((node) => {
-      const form = node as HTMLFormElement
-      const isClient = Boolean(form.querySelector('input[name="company_name"]') && form.querySelector('input[name="service_amount"]') && form.querySelector('input[name="email"]'))
-      if (isClient) {
+      document.querySelectorAll("form").forEach((node) => {
+        const form = node as HTMLFormElement
+        const isClient = Boolean(form.querySelector('input[name="company_name"]') && form.querySelector('input[name="service_amount"]') && form.querySelector('input[name="email"]'))
+        if (!isClient) return
         const row = clientFor(form)
         const details = form.closest("details") as HTMLElement | null
         if (details && row) details.hidden = Boolean(row.archived)
         addArchiveAction(form, "clients", row)
-      }
+      })
+      return
+    }
 
-      const isProject = Boolean(form.querySelector('input[name="budget"]') && form.querySelector('select[name="stage"]') && form.querySelector('input[name="client"]'))
-      if (isProject) {
+    if (onProjects) {
+      // Keep Payment notes in React's DOM for data compatibility, but do not
+      // render it visually in the Project dropdown.
+      document.querySelectorAll('textarea[name="payment_notes"]').forEach((textarea) => {
+        const label = textarea.closest("label") as HTMLElement | null
+        if (label && !label.hidden) label.hidden = true
+      })
+
+      document.querySelectorAll("form").forEach((node) => {
+        const form = node as HTMLFormElement
+        const isProject = Boolean(form.querySelector('input[name="budget"]') && form.querySelector('select[name="stage"]') && form.querySelector('input[name="client"]'))
+        if (!isProject) return
         const row = projectFor(form)
         const details = form.closest("details") as HTMLElement | null
         if (details && row) details.hidden = Boolean(row.archived)
         addArchiveAction(form, "projects", row)
-      }
-    })
+      })
 
-    const pageTitle = Array.from(document.querySelectorAll("h1")).find((el) => (el.textContent || "").trim() === "Projects")
-    const existingProjectHeader = document.querySelector("[data-orbit-project-archive-header]")
-    if (!pageTitle) {
-      existingProjectHeader?.remove()
-    } else if (!existingProjectHeader) {
-      const header = pageTitle.closest("header")
-      if (header) {
-        const box = document.createElement("div")
-        box.dataset.orbitProjectArchiveHeader = "true"
-        box.className = "ml-auto flex items-center gap-2"
-        const currency = document.createElement("span")
-        currency.className = "rounded-full border border-cyan-300/25 bg-cyan-300/[.08] px-3 py-2 text-xs font-semibold text-cyan-100"
-        currency.textContent = "USD"
-        fetch("/api/me", { cache: "no-store" }).then((r) => r.ok ? r.json() : null).then((me) => { if (me?.currency) currency.textContent = me.currency }).catch(() => {})
-        const trigger = document.createElement("button")
-        trigger.type = "button"
-        trigger.dataset.orbitProjectArchiveTrigger = "true"
-        trigger.className = buttonClass
-        trigger.addEventListener("click", () => setView("projects"))
-        box.append(currency, trigger)
-        const search = header.querySelector('input[placeholder="Search current view"]')?.closest("div")
-        header.insertBefore(box, search || null)
+      const existingProjectHeader = document.querySelector("[data-orbit-project-archive-header]")
+      if (!existingProjectHeader) {
+        const pageTitle = Array.from(document.querySelectorAll("h1")).find((el) => (el.textContent || "").trim() === "Projects")
+        const header = pageTitle?.closest("header")
+        if (header) {
+          const box = document.createElement("div")
+          box.dataset.orbitProjectArchiveHeader = "true"
+          box.className = "ml-auto flex items-center gap-2"
+          const currency = document.createElement("span")
+          currency.className = "rounded-full border border-cyan-300/25 bg-cyan-300/[.08] px-3 py-2 text-xs font-semibold text-cyan-100"
+          currency.textContent = "USD"
+          fetch("/api/me", { cache: "no-store" }).then((r) => r.ok ? r.json() : null).then((me) => { if (me?.currency) currency.textContent = me.currency }).catch(() => {})
+          const trigger = document.createElement("button")
+          trigger.type = "button"
+          trigger.dataset.orbitProjectArchiveTrigger = "true"
+          trigger.className = buttonClass
+          trigger.addEventListener("click", () => setView("projects"))
+          box.append(currency, trigger)
+          const search = header.querySelector('input[placeholder="Search current view"]')?.closest("div")
+          header.insertBefore(box, search || null)
+        }
       }
+      const projectTrigger = document.querySelector("[data-orbit-project-archive-trigger]") as HTMLButtonElement | null
+      if (projectTrigger) projectTrigger.textContent = `Archived projects (${records.current.projects.filter((row) => row.archived).length}/50)`
     }
-    const projectTrigger = document.querySelector("[data-orbit-project-archive-trigger]") as HTMLButtonElement | null
-    if (projectTrigger) projectTrigger.textContent = `Archived projects (${records.current.projects.filter((row) => row.archived).length}/50)`
   }
 
-  function scheduleScan(delay = 80) {
+  function scheduleScan(delay = 100) {
     if (scanTimer.current) window.clearTimeout(scanTimer.current)
     scanTimer.current = window.setTimeout(() => {
       scanTimer.current = null
@@ -170,25 +188,30 @@ export function OrbitArchiveControls() {
     refresh().catch(() => {})
     scheduleScan(0)
 
-    // The previous whole-document MutationObserver ran a full form scan for every
-    // React/portal DOM mutation. On dynamic tabs (especially Investments) that could
-    // create a mutation storm and freeze the dashboard. Use bounded scans instead.
-    const timer = window.setInterval(() => scan(), 1200)
+    // Scans are bounded and page-scoped. There is deliberately no global
+    // MutationObserver here: dynamic tabs such as Stocks/Crypto can generate
+    // many DOM mutations while rendering prices and animations.
+    const scanInterval = window.setInterval(() => scan(), 2200)
+    const refreshInterval = window.setInterval(() => {
+      const title = (document.querySelector("h1")?.textContent || "").trim()
+      if (title === "Clients" || title === "Projects") refresh().catch(() => {})
+    }, 15000)
     const onFocus = () => {
       refresh().catch(() => {})
-      scheduleScan(50)
+      scheduleScan(60)
     }
     const onClick = () => {
-      scheduleScan(80)
-      window.setTimeout(() => scheduleScan(80), 240)
+      scheduleScan(100)
+      window.setTimeout(() => scheduleScan(80), 420)
     }
-    const onVisibility = () => document.visibilityState === "visible" && scheduleScan(30)
+    const onVisibility = () => document.visibilityState === "visible" && scheduleScan(50)
 
     window.addEventListener("focus", onFocus)
     document.addEventListener("click", onClick, true)
     document.addEventListener("visibilitychange", onVisibility)
     return () => {
-      window.clearInterval(timer)
+      window.clearInterval(scanInterval)
+      window.clearInterval(refreshInterval)
       if (scanTimer.current) window.clearTimeout(scanTimer.current)
       window.removeEventListener("focus", onFocus)
       document.removeEventListener("click", onClick, true)
@@ -197,7 +220,7 @@ export function OrbitArchiveControls() {
   }, [])
 
   useEffect(() => {
-    scheduleScan(20)
+    scheduleScan(30)
   }, [clients, projects])
 
   const archived = view === "clients" ? clients.filter((row) => row.archived) : projects.filter((row) => row.archived)
