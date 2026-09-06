@@ -1,6 +1,7 @@
 "use client"
 
 import { FormEvent, useEffect, useRef, useState } from "react"
+import { usePathname } from "next/navigation"
 import { Camera, KeyRound, MapPin, ShieldCheck, UserRound, X } from "lucide-react"
 import { toast } from "sonner"
 
@@ -14,11 +15,13 @@ function initials(name: string) {
 }
 
 export function OrbitUserProfile() {
+  const pathname = usePathname()
   const [open, setOpen] = useState(false)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [saving, setSaving] = useState(false)
   const [passwordBusy, setPasswordBusy] = useState(false)
   const triggerRef = useRef<HTMLElement | null>(null)
+  const triggerCleanup = useRef<(() => void) | null>(null)
 
   async function load() {
     const r = await fetch("/api/me", { cache: "no-store" })
@@ -39,34 +42,62 @@ export function OrbitUserProfile() {
   }
 
   function bindTrigger() {
+    triggerCleanup.current?.()
+    triggerCleanup.current = null
+    triggerRef.current = null
+
     const input = document.querySelector('#orbit-navigation input[type="file"][accept="image/*"]') as HTMLInputElement | null
     const card = input?.closest("label")?.parentElement as HTMLElement | null
-    if (!card || card.dataset.orbitProfileTrigger === "true") return
+    if (!card) return false
+
     card.dataset.orbitProfileTrigger = "true"
     card.setAttribute("role", "button")
     card.setAttribute("tabindex", "0")
     card.setAttribute("aria-label", "Open user profile")
     card.classList.add("cursor-pointer", "transition", "hover:border-cyan-300/30", "hover:bg-white/[.075]")
     triggerRef.current = card
+
     const activate = (event: Event) => {
       event.preventDefault()
       event.stopPropagation()
       load().then(() => setOpen(true)).catch(() => setOpen(true))
     }
-    card.addEventListener("click", activate, true)
-    card.addEventListener("keydown", (event) => {
+    const onKeyDown = (event: Event) => {
       const keyEvent = event as KeyboardEvent
       if (keyEvent.key === "Enter" || keyEvent.key === " ") activate(event)
-    })
+    }
+
+    card.addEventListener("click", activate, true)
+    card.addEventListener("keydown", onKeyDown)
+    triggerCleanup.current = () => {
+      card.removeEventListener("click", activate, true)
+      card.removeEventListener("keydown", onKeyDown)
+    }
+    return true
   }
 
   useEffect(() => {
     load().catch(() => {})
-    bindTrigger()
-    const observer = new MutationObserver(bindTrigger)
-    observer.observe(document.body, { childList: true, subtree: true })
-    return () => observer.disconnect()
-  }, [])
+    let cancelled = false
+    let attempts = 0
+    let timer: number | null = null
+
+    const tryBind = () => {
+      if (cancelled) return
+      if (bindTrigger()) return
+      attempts += 1
+      if (attempts < 8) timer = window.setTimeout(tryBind, 150)
+    }
+
+    tryBind()
+    return () => {
+      cancelled = true
+      if (timer) window.clearTimeout(timer)
+      triggerCleanup.current?.()
+      triggerCleanup.current = null
+      triggerRef.current = null
+    }
+  }, [pathname])
 
   useEffect(() => {
     if (!open) return
