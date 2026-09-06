@@ -14,6 +14,7 @@ export function OrbitArchiveControls() {
   const [projects, setProjects] = useState<Row[]>([])
   const [view, setView] = useState<ArchiveView>(null)
   const records = useRef({ clients: [] as Row[], projects: [] as Row[] })
+  const scanTimer = useRef<number | null>(null)
   records.current = { clients, projects }
 
   async function refresh() {
@@ -35,6 +36,7 @@ export function OrbitArchiveControls() {
     if (!r.ok) return toast.error(d.error || "We could not update the archive.")
     toast.success(archived ? `${resource === "clients" ? "Client" : "Project"} archived.` : `${resource === "clients" ? "Client" : "Project"} restored.`)
     await refresh()
+    scheduleScan(30)
   }
 
   function clientFor(form: HTMLFormElement) {
@@ -77,19 +79,21 @@ export function OrbitArchiveControls() {
   }
 
   function scan() {
-    // Remove the redundant owner/admin exact-email lookup block.
+    if (document.visibilityState === "hidden") return
+
+    // Hide the redundant owner/admin exact-email lookup without removing React-owned nodes.
     document.querySelectorAll("section").forEach((section) => {
       if ((section.textContent || "").includes("Direct account lookup")) {
-        ;(section as HTMLElement).style.display = "none"
-        const parent = section.parentElement
-        if (parent) parent.style.gridTemplateColumns = "minmax(0, 1fr)"
+        ;(section as HTMLElement).hidden = true
       }
     })
 
-    // Payment notes are intentionally not part of the editable Project form anymore.
-    document.querySelectorAll('textarea[name="payment_notes"]').forEach((textarea) => textarea.closest("label")?.remove())
+    // Keep the field in React's DOM so reconciliation stays stable; only hide it visually.
+    document.querySelectorAll('textarea[name="payment_notes"]').forEach((textarea) => {
+      const label = textarea.closest("label") as HTMLElement | null
+      if (label && !label.hidden) label.hidden = true
+    })
 
-    // Client directory archive control and active-list filtering.
     const clientSearch = document.querySelector('input[placeholder="Search clients"]') as HTMLInputElement | null
     if (clientSearch) {
       const controls = clientSearch.closest("div.relative")?.parentElement
@@ -113,7 +117,7 @@ export function OrbitArchiveControls() {
       if (isClient) {
         const row = clientFor(form)
         const details = form.closest("details") as HTMLElement | null
-        if (details && row) details.style.display = row.archived ? "none" : ""
+        if (details && row) details.hidden = Boolean(row.archived)
         addArchiveAction(form, "clients", row)
       }
 
@@ -121,12 +125,11 @@ export function OrbitArchiveControls() {
       if (isProject) {
         const row = projectFor(form)
         const details = form.closest("details") as HTMLElement | null
-        if (details && row) details.style.display = row.archived ? "none" : ""
+        if (details && row) details.hidden = Boolean(row.archived)
         addArchiveAction(form, "projects", row)
       }
     })
 
-    // Put an Archived Projects control beside a clear currency pill in the Projects header.
     const pageTitle = Array.from(document.querySelectorAll("h1")).find((el) => (el.textContent || "").trim() === "Projects")
     const existingProjectHeader = document.querySelector("[data-orbit-project-archive-header]")
     if (!pageTitle) {
@@ -155,21 +158,46 @@ export function OrbitArchiveControls() {
     if (projectTrigger) projectTrigger.textContent = `Archived projects (${records.current.projects.filter((row) => row.archived).length}/50)`
   }
 
+  function scheduleScan(delay = 80) {
+    if (scanTimer.current) window.clearTimeout(scanTimer.current)
+    scanTimer.current = window.setTimeout(() => {
+      scanTimer.current = null
+      scan()
+    }, delay)
+  }
+
   useEffect(() => {
     refresh().catch(() => {})
-    const observer = new MutationObserver(() => scan())
-    observer.observe(document.body, { childList: true, subtree: true })
-    const onFocus = () => refresh().catch(() => {})
+    scheduleScan(0)
+
+    // The previous whole-document MutationObserver ran a full form scan for every
+    // React/portal DOM mutation. On dynamic tabs (especially Investments) that could
+    // create a mutation storm and freeze the dashboard. Use bounded scans instead.
+    const timer = window.setInterval(() => scan(), 1200)
+    const onFocus = () => {
+      refresh().catch(() => {})
+      scheduleScan(50)
+    }
+    const onClick = () => {
+      scheduleScan(80)
+      window.setTimeout(() => scheduleScan(80), 240)
+    }
+    const onVisibility = () => document.visibilityState === "visible" && scheduleScan(30)
+
     window.addEventListener("focus", onFocus)
-    scan()
+    document.addEventListener("click", onClick, true)
+    document.addEventListener("visibilitychange", onVisibility)
     return () => {
-      observer.disconnect()
+      window.clearInterval(timer)
+      if (scanTimer.current) window.clearTimeout(scanTimer.current)
       window.removeEventListener("focus", onFocus)
+      document.removeEventListener("click", onClick, true)
+      document.removeEventListener("visibilitychange", onVisibility)
     }
   }, [])
 
   useEffect(() => {
-    scan()
+    scheduleScan(20)
   }, [clients, projects])
 
   const archived = view === "clients" ? clients.filter((row) => row.archived) : projects.filter((row) => row.archived)
