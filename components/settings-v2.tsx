@@ -37,22 +37,12 @@ export const markets = [
   { code: "CH", flag: "🇨🇭", name: "Schweiz / Suisse", language: "de", languageName: "Deutsch / Français / Italiano", currency: "CHF" },
 ]
 
-const languages = [...new Map(markets.map((x) => [x.language, x])).values()].map((x) => ({
-  code: x.language,
-  name: x.languageName.split(" / ")[0],
-}))
-const currencies = [...new Set(markets.map((x) => x.currency))]
-
 const fieldClass =
   "h-11 rounded-xl border-white/10 bg-[#08111f]/85 text-sm text-white placeholder:text-slate-500 focus-visible:border-cyan-300/50 focus-visible:ring-cyan-300/15"
 const selectClass =
   "h-11 w-full rounded-xl border border-white/10 bg-[#08111f]/85 px-3 text-sm text-slate-200 outline-none transition focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/10"
 
-export function SettingsV2({ me, setMe, inviteOnly = false }: R) {
-  const [name, setName] = useState(me.name || "")
-  const [country, setCountry] = useState(me.country || "US")
-  const [language, setLanguage] = useState(me.language || "en")
-  const [currency, setCurrency] = useState(me.currency || "USD")
+export function SettingsV2({ me, inviteOnly = false }: R) {
   const [people, setPeople] = useState<R[]>([])
   const [sending, setSending] = useState(false)
 
@@ -64,18 +54,6 @@ export function SettingsV2({ me, setMe, inviteOnly = false }: R) {
         .catch(() => {})
     }
   }, [inviteOnly])
-
-  async function save() {
-    const r = await fetch("/api/profile/settings", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name, country, language, currency }),
-    })
-    const d = await r.json()
-    if (!r.ok) return toast.error(d.error || "We could not save this change. Please try again.")
-    setMe((m: R) => ({ ...m, name, country, language, currency }))
-    toast.success("Preferences saved")
-  }
 
   async function invite(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -308,52 +286,6 @@ export function SettingsV2({ me, setMe, inviteOnly = false }: R) {
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       <SubscriptionSettings me={me} />
-      <Card className="border-cyan-300/20 bg-cyan-300/[.045] p-5 text-white">
-        <h2 className="mb-4 font-semibold">Profile</h2>
-        <Label text="Your display name">
-          <Input value={name} onChange={(e) => setName(e.target.value)} maxLength={80} placeholder="Your name" />
-        </Label>
-        <p className="mb-4 text-xs text-slate-500">This name appears beside your profile picture throughout Orbit LM.</p>
-        <Button onClick={save}>Update profile</Button>
-      </Card>
-      <Card className="border-white/10 bg-white/5 p-5 text-white">
-        <h2 className="mb-4 font-semibold">Country, language and currency</h2>
-        <Label text="Country / market">
-          <select
-            value={country}
-            onChange={(e) => {
-              const c = e.target.value
-              const m = markets.find((x) => x.code === c)!
-              setCountry(c)
-              setLanguage(m.language)
-              setCurrency(m.currency)
-            }}
-          >
-            {markets.map((x) => (
-              <option key={x.code} value={x.code}>{x.flag} {x.name}</option>
-            ))}
-          </select>
-        </Label>
-        <Label text="Language">
-          <select value={language} onChange={(e) => setLanguage(e.target.value)}>
-            {languages.map((x) => <option key={x.code} value={x.code}>{x.name}</option>)}
-          </select>
-        </Label>
-        <Label text="Default currency">
-          <select value={currency} onChange={(e) => setCurrency(e.target.value)}>
-            {currencies.map((x) => <option key={x}>{x}</option>)}
-          </select>
-        </Label>
-        <Button onClick={save}>Save preferences</Button>
-      </Card>
-      <Card className="border-white/10 bg-white/5 p-5 text-white">
-        <details className="group">
-          <summary className="cursor-pointer py-2 font-semibold text-cyan-100">Available markets</summary>
-          <div className="mt-3">
-            {markets.map((x) => <div key={x.code} className="mb-2 rounded-xl bg-black/20 p-3 text-sm">{x.flag} {x.name} · {x.currency}</div>)}
-          </div>
-        </details>
-      </Card>
     </div>
   )
 }
@@ -392,8 +324,4 @@ function AccessNote({ icon, title, copy, tone }: { icon: React.ReactNode; title:
       </div>
     </div>
   )
-}
-
-function Label({ text, children }: R) {
-  return <label className="mb-4 block text-xs text-slate-400">{text}<div className="mt-2">{children}</div></label>
 }
