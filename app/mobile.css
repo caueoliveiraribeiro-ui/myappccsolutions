@@ -44,11 +44,11 @@
   }
 
   /* Recharts becomes illegible when a 6- or 12-month chart is squeezed into
-     a 320–430px viewport. Give the plot a useful minimum canvas and let the
-     user swipe the chart horizontally instead of crushing axes and bars. */
-  .wealth-dashboard .h-56,
-  .wealth-dashboard .h-64,
-  .wealth-dashboard .h-72 {
+     a 320–430px viewport. Give only actual chart containers a useful minimum
+     canvas and let the user swipe horizontally instead of crushing axes/bars. */
+  .wealth-dashboard .h-56:has(> .recharts-responsive-container),
+  .wealth-dashboard .h-64:has(> .recharts-responsive-container),
+  .wealth-dashboard .h-72:has(> .recharts-responsive-container) {
     max-width: 100%;
     overflow-x: auto;
     overflow-y: hidden;
@@ -58,9 +58,9 @@
     padding-bottom: 0.25rem;
   }
 
-  .wealth-dashboard .h-56::-webkit-scrollbar,
-  .wealth-dashboard .h-64::-webkit-scrollbar,
-  .wealth-dashboard .h-72::-webkit-scrollbar {
+  .wealth-dashboard .h-56:has(> .recharts-responsive-container)::-webkit-scrollbar,
+  .wealth-dashboard .h-64:has(> .recharts-responsive-container)::-webkit-scrollbar,
+  .wealth-dashboard .h-72:has(> .recharts-responsive-container)::-webkit-scrollbar {
     display: none;
   }
 
