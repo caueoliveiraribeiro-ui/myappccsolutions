@@ -7,6 +7,8 @@ import { OrbitSupportChat } from "@/components/orbit-support-chat"
 import { LeadsManagerGoogleOnly } from "@/components/leads-manager-google-only"
 import { LeadDirectoryEmailControls } from "@/components/lead-directory-email-controls"
 import { CrmEmailActions } from "@/components/crm-email-actions"
+import { OrbitArchiveControls } from "@/components/orbit-archive-controls"
+import { OrbitUserProfile } from "@/components/orbit-user-profile"
 
 const figtree = Figtree({
   subsets: ["latin"],
@@ -32,6 +34,8 @@ export default function RootLayout({
         <LeadsManagerGoogleOnly />
         <LeadDirectoryEmailControls />
         <CrmEmailActions />
+        <OrbitArchiveControls />
+        <OrbitUserProfile />
         <Toaster richColors theme="dark" />
       </body>
     </html>
