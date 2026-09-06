@@ -9,6 +9,23 @@ type Profile = Record<string, any>
 const countries = [["US","United States"],["BR","Brazil"],["GB","United Kingdom"],["CA","Canada"],["AU","Australia"],["PT","Portugal"],["ES","Spain"],["DE","Germany"],["FR","France"],["IT","Italy"],["NL","Netherlands"],["CH","Switzerland"],["JP","Japan"],["KR","South Korea"],["MX","Mexico"]]
 const languages = [["en","English"],["pt","Português"],["es","Español"],["de","Deutsch"],["fr","Français"],["it","Italiano"],["nl","Nederlands"],["ja","日本語"],["ko","한국어"]]
 const currencies = ["USD","BRL","EUR","GBP","CAD","AUD","JPY","KRW","MXN","CHF"]
+const availableMarkets = [
+  { code: "US", flag: "🇺🇸", name: "United States", currency: "USD" },
+  { code: "BR", flag: "🇧🇷", name: "Brasil", currency: "BRL" },
+  { code: "GB", flag: "🇬🇧", name: "United Kingdom", currency: "GBP" },
+  { code: "DE", flag: "🇩🇪", name: "Deutschland", currency: "EUR" },
+  { code: "FR", flag: "🇫🇷", name: "France", currency: "EUR" },
+  { code: "ES", flag: "🇪🇸", name: "España", currency: "EUR" },
+  { code: "IT", flag: "🇮🇹", name: "Italia", currency: "EUR" },
+  { code: "PT", flag: "🇵🇹", name: "Portugal", currency: "EUR" },
+  { code: "CA", flag: "🇨🇦", name: "Canada", currency: "CAD" },
+  { code: "AU", flag: "🇦🇺", name: "Australia", currency: "AUD" },
+  { code: "JP", flag: "🇯🇵", name: "日本", currency: "JPY" },
+  { code: "KR", flag: "🇰🇷", name: "대한민국", currency: "KRW" },
+  { code: "MX", flag: "🇲🇽", name: "México", currency: "MXN" },
+  { code: "NL", flag: "🇳🇱", name: "Nederland", currency: "EUR" },
+  { code: "CH", flag: "🇨🇭", name: "Schweiz / Suisse", currency: "CHF" },
+]
 
 function initials(name: string) {
   return (name || "OU").split(" ").slice(0, 2).map((part) => part[0]).join("").toUpperCase()
@@ -39,6 +56,13 @@ export function OrbitUserProfile() {
     const avatarBox = card.querySelector("label > div") as HTMLElement | null
     if (avatarBox && next.avatar_url) avatarBox.innerHTML = `<img src="${String(next.avatar_url).replaceAll('"','&quot;')}" alt="Profile avatar" class="h-full w-full object-cover" />`
     else if (avatarBox) avatarBox.textContent = initials(next.name)
+  }
+
+  function refreshDashboardProfile() {
+    // OperationsDashboard already refreshes /api/me on window focus. Reusing
+    // that existing path keeps regional/profile changes in React state without
+    // introducing another global DOM observer.
+    window.dispatchEvent(new Event("focus"))
   }
 
   function bindTrigger() {
@@ -116,6 +140,7 @@ export function OrbitUserProfile() {
     const next = { ...(profile || {}), avatar_url: d.avatar_url }
     setProfile(next)
     syncSidebar(next)
+    refreshDashboardProfile()
     toast.success("Profile photo updated.")
   }
 
@@ -135,7 +160,8 @@ export function OrbitUserProfile() {
     const next = { ...profile, ...d }
     setProfile(next)
     syncSidebar(next)
-    toast.success("Profile saved.")
+    refreshDashboardProfile()
+    toast.success("Profile saved and applied across Orbit.")
   }
 
   async function changePassword(event: FormEvent<HTMLFormElement>) {
@@ -205,6 +231,20 @@ export function OrbitUserProfile() {
                 <label className="text-xs text-slate-400">Language<select name="language" defaultValue={profile?.language || "en"} className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#091522] px-3 text-sm">{languages.map(([code,label])=><option key={code} value={code}>{label}</option>)}</select></label>
                 <label className="text-xs text-slate-400">Default currency<select name="currency" defaultValue={profile?.currency || "USD"} className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#091522] px-3 text-sm">{currencies.map((code)=><option key={code}>{code}</option>)}</select></label>
                 <Field label="Time zone" name="timezone" defaultValue={profile?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone} placeholder="America/Sao_Paulo"/>
+                <details className="group rounded-xl border border-white/10 bg-[#091522] text-xs text-slate-300 open:border-cyan-300/30">
+                  <summary className="flex h-10 cursor-pointer list-none items-center justify-between px-3 font-medium text-slate-300">
+                    <span>Available markets</span>
+                    <span className="text-cyan-300 transition group-open:rotate-180">⌄</span>
+                  </summary>
+                  <div className="max-h-48 space-y-1 overflow-y-auto border-t border-white/[.07] p-2">
+                    {availableMarkets.map((market) => (
+                      <div key={market.code} className="flex items-center justify-between gap-3 rounded-lg bg-black/20 px-2.5 py-2">
+                        <span className="min-w-0 truncate">{market.flag} {market.name}</span>
+                        <span className="shrink-0 font-medium text-cyan-100">{market.currency}</span>
+                      </div>
+                    ))}
+                  </div>
+                </details>
               </div>
             </section>
 
