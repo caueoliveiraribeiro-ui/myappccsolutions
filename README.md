@@ -29,3 +29,4 @@ The current build saves CRM and portfolio records in the signed-in browser. This
 
 Airbnb is treated as a research source only. The app does not scrape Airbnb; use authorized or manually collected public information and follow platform terms and local privacy/marketing laws.
 
+<!-- Vercel deployment trigger: 2026-09-06 -->
