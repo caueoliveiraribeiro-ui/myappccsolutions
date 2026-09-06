@@ -1,12 +1,10 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useEffect } from "react"
 
 const STYLE_ID = "orbit-google-only-leads-style"
 
 export function LeadsManagerGoogleOnly() {
-  const timerRef = useRef<number | null>(null)
-
   useEffect(() => {
     if (!document.getElementById(STYLE_ID)) {
       const style = document.createElement("style")
@@ -23,9 +21,8 @@ export function LeadsManagerGoogleOnly() {
     }
 
     function cleanLeadsFinder() {
-      const heading = Array.from(document.querySelectorAll("h2")).find(
-        (node) => node.textContent?.trim() === "Find and manage leads",
-      )
+      const headings = Array.from(document.querySelectorAll("h2"))
+      const heading = headings.find((node) => node.textContent?.trim() === "Find and manage leads")
       const panel = heading?.parentElement as HTMLElement | null
       if (!panel || !heading) return
 
@@ -50,29 +47,14 @@ export function LeadsManagerGoogleOnly() {
       })
     }
 
-    const schedule = (delay = 100) => {
-      if (timerRef.current) window.clearTimeout(timerRef.current)
-      timerRef.current = window.setTimeout(() => {
-        timerRef.current = null
-        cleanLeadsFinder()
-      }, delay)
-    }
-
     cleanLeadsFinder()
-    const interval = window.setInterval(cleanLeadsFinder, 2200)
-    const onClick = () => {
-      schedule(100)
-      window.setTimeout(() => schedule(60), 420)
-    }
-    const onFocus = () => schedule(50)
-    document.addEventListener("click", onClick, true)
-    window.addEventListener("focus", onFocus)
+    const observer = new MutationObserver(cleanLeadsFinder)
+    observer.observe(document.body, { childList: true, subtree: true, characterData: true })
 
+    const timer = window.setInterval(cleanLeadsFinder, 1000)
     return () => {
-      window.clearInterval(interval)
-      if (timerRef.current) window.clearTimeout(timerRef.current)
-      document.removeEventListener("click", onClick, true)
-      window.removeEventListener("focus", onFocus)
+      observer.disconnect()
+      window.clearInterval(timer)
     }
   }, [])
 
