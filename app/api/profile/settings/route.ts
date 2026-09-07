@@ -11,6 +11,11 @@ function text(value: unknown, max: number) {
   return String(value || "").trim().slice(0, max)
 }
 
+function looksLikeSchemaError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error || "")
+  return /PGRST20\d|schema cache|column .* does not exist|could not find .* column/i.test(message)
+}
+
 export async function POST(request: Request) {
   const token = (await cookies()).get("orbit_session")?.value
   const user = token ? await getSession(token) : null
@@ -19,15 +24,18 @@ export async function POST(request: Request) {
   try {
     const body = await request.json()
     const name = text(body.name, 80)
-    const country = String(body.country || "US")
-    const language = String(body.language || "en")
+    const country = String(body.country || "US").toUpperCase()
+    const language = String(body.language || "en").toLowerCase()
     const currency = String(body.currency || "USD").toUpperCase()
-    if (!name) return NextResponse.json({ error: "Enter a profile name between 1 and 80 characters." }, { status: 400 })
+
+    if (!name) {
+      return NextResponse.json({ error: "Enter a profile name between 1 and 80 characters." }, { status: 400 })
+    }
     if (!countries.includes(country) || !languages.includes(language) || !currencies.includes(currency)) {
-      return NextResponse.json({ error: "Invalid preference" }, { status: 400 })
+      return NextResponse.json({ error: "Invalid profile preference." }, { status: 400 })
     }
 
-    const profile = {
+    const profile: Record<string, any> = {
       user_id: user.id,
       name,
       email: user.email,
@@ -48,14 +56,67 @@ export async function POST(request: Request) {
       updated_at: new Date().toISOString(),
     }
 
-    const rows = await db("user_profiles?on_conflict=user_id", {
-      method: "POST",
-      headers: { Prefer: "resolution=merge-duplicates,return=representation" },
-      body: JSON.stringify(profile),
+    let saved: Record<string, any> | null = null
+    let missingFields: string[] = []
+
+    try {
+      const rows = await db("user_profiles?on_conflict=user_id", {
+        method: "POST",
+        headers: { Prefer: "resolution=merge-duplicates,return=representation" },
+        body: JSON.stringify(profile),
+      })
+      saved = rows?.[0] || profile
+    } catch (fullSaveError) {
+      // Older Orbit databases may not yet have every newer profile column.
+      // One optional field must not prevent core preferences (currency,
+      // language and country) from being persisted.
+      const existingRows = await db(`user_profiles?user_id=eq.${encodeURIComponent(user.id)}&select=*&limit=1`)
+      const existing = existingRows?.[0]
+
+      if (!existing) throw fullSaveError
+
+      const supported = new Set(Object.keys(existing))
+      const changes = Object.fromEntries(
+        Object.entries(profile).filter(([key]) => key !== "user_id" && supported.has(key)),
+      )
+      missingFields = Object.keys(profile).filter(
+        (key) => key !== "user_id" && !supported.has(key),
+      )
+
+      const rows = await db(`user_profiles?user_id=eq.${encodeURIComponent(user.id)}`, {
+        method: "PATCH",
+        body: JSON.stringify(changes),
+      })
+      saved = rows?.[0] || { ...existing, ...changes }
+
+      if (!looksLikeSchemaError(fullSaveError) && missingFields.length === 0) {
+        throw fullSaveError
+      }
+    }
+
+    // Keep the account directory name aligned with the user-facing profile
+    // when this identity also exists in app_users. Protected owner fallback
+    // identities may not have an app_users row, so this synchronization is soft.
+    try {
+      await db(`app_users?id=eq.${encodeURIComponent(user.id)}`, {
+        method: "PATCH",
+        body: JSON.stringify({ name }),
+      })
+    } catch {}
+
+    return NextResponse.json({
+      ...(saved || profile),
+      partial: missingFields.length > 0,
+      missing_fields: missingFields,
     })
-    return NextResponse.json(rows?.[0] || profile)
   } catch (error) {
     console.error("Profile settings update failed", error)
-    return NextResponse.json({ error: "We could not save your profile." }, { status: 500 })
+    if (looksLikeSchemaError(error)) {
+      return NextResponse.json({
+        error: "Your Orbit profile database needs the latest profile update before all fields can be saved.",
+        code: "PROFILE_SCHEMA_UPDATE_REQUIRED",
+      }, { status: 503 })
+    }
+    return NextResponse.json({ error: "We could not save your profile. Please try again." }, { status: 500 })
   }
 }
