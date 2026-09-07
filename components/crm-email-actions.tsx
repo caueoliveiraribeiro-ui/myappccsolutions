@@ -2,7 +2,8 @@
 
 import { FormEvent, useEffect, useState } from "react"
 import { createPortal } from "react-dom"
-import { Mail, X } from "lucide-react"
+import { Archive, Mail, X } from "lucide-react"
+import { ArchiveManagerButton } from "@/components/archive-manager"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -45,20 +46,41 @@ function addSlot(form: HTMLFormElement, id: string, kind: Kind) {
     slot = document.createElement("span")
     slot.dataset.orbitCrmEmailAction = id
     slot.dataset.orbitCrmEmailKind = kind
-    slot.className = "inline-flex"
+    slot.className = "inline-flex flex-wrap gap-2"
     saveButton.insertAdjacentElement("afterend", slot)
+  }
+  return slot
+}
+
+function addProjectArchiveSlot() {
+  const summary = Array.from(document.querySelectorAll<HTMLElement>("summary")).find((node) => {
+    const first = node.firstElementChild
+    return first?.textContent?.trim() === "Create project"
+  })
+  const details = summary?.closest("details")
+  if (!(details instanceof HTMLElement)) return null
+
+  details.classList.add("relative")
+  let slot = details.querySelector<HTMLElement>("[data-orbit-project-archive-menu]")
+  if (!slot) {
+    slot = document.createElement("span")
+    slot.dataset.orbitProjectArchiveMenu = "true"
+    slot.className = "absolute right-11 top-2 z-20 inline-flex"
+    details.appendChild(slot)
   }
   return slot
 }
 
 export function CrmEmailActions() {
   const [targets, setTargets] = useState<EmailTarget[]>([])
+  const [projectArchiveSlot, setProjectArchiveSlot] = useState<HTMLElement | null>(null)
   const [connection, setConnection] = useState<ConnectionState>({ connected: false, email: null })
   const [composer, setComposer] = useState<ComposerState | null>(null)
   const [to, setTo] = useState("")
   const [subject, setSubject] = useState("")
   const [message, setMessage] = useState("")
   const [sending, setSending] = useState(false)
+  const [archiving, setArchiving] = useState<string | null>(null)
 
   async function refreshConnection() {
     try {
@@ -77,68 +99,77 @@ export function CrmEmailActions() {
   }, [])
 
   useEffect(() => {
+    let scanTimer: number | null = null
+
     const scan = () => {
       const next: EmailTarget[] = []
+      const pageTitle = (document.querySelector("h1")?.textContent || "").trim()
 
-      // Clients → Client directory → each client dropdown.
-      const clientHeading = Array.from(document.querySelectorAll("h2")).find(
-        (node) => node.textContent?.trim() === "Client directory",
-      )
-      const clientPanel = clientHeading?.closest("[data-slot='card']") || clientHeading?.parentElement?.parentElement
-      if (clientPanel instanceof HTMLElement) {
-        clientPanel.querySelectorAll<HTMLFormElement>("details form").forEach((form, index) => {
-          const id = `client-${index}`
-          const slot = addSlot(form, id, "client")
-          if (slot) next.push({ id, slot, form, kind: "client" })
-        })
-      }
-
-      // Pipeline → Lead history → each lead/client history dropdown.
-      const pipelineHeading = Array.from(document.querySelectorAll("h2")).find(
-        (node) => node.textContent?.trim() === "Lead history",
-      )
-      const pipelinePanel = pipelineHeading?.closest("[data-slot='card']") || pipelineHeading?.parentElement?.parentElement
-      if (pipelinePanel instanceof HTMLElement) {
-        pipelinePanel.querySelectorAll<HTMLFormElement>("details form").forEach((form, index) => {
-          // Move Description once so the stable order is Status → Description → Management notes.
-          // The previous unconditional DOM move retriggered MutationObserver continuously and could lock the Pipeline tab.
-          const description = form.querySelector<HTMLTextAreaElement>('textarea[name="description"]')?.closest("label")
-          const notes = form.querySelector<HTMLTextAreaElement>('textarea[name="notes"]')?.closest("label")
-          const status = form.querySelector<HTMLSelectElement>('select[name="status"]')?.closest("label")
-          if (
-            description &&
-            notes &&
-            status &&
-            description.parentElement === notes.parentElement &&
-            description.parentElement === status.parentElement &&
-            status.nextElementSibling !== description
-          ) {
-            status.insertAdjacentElement("afterend", description)
-          }
-
-          const id = `pipeline-${index}`
-          const slot = addSlot(form, id, "pipeline")
-          if (slot) next.push({ id, slot, form, kind: "pipeline" })
-        })
-      }
-
-      // Projects → active projects and project history dropdowns.
-      document.querySelectorAll<HTMLFormElement>("form").forEach((form, index) => {
-        const isProject = Boolean(
-          form.querySelector('input[name="contact_email"]') &&
-          form.querySelector('select[name="stage"]') &&
-          form.querySelector('input[name="name"]'),
+      if (pageTitle === "Clients") {
+        const clientHeading = Array.from(document.querySelectorAll("h2")).find(
+          (node) => node.textContent?.trim() === "Client directory",
         )
-        if (!isProject) return
+        const clientPanel = clientHeading?.closest("[data-slot='card']") || clientHeading?.parentElement?.parentElement
+        if (clientPanel instanceof HTMLElement) {
+          clientPanel.querySelectorAll<HTMLFormElement>("details form").forEach((form, index) => {
+            const id = `client-${index}`
+            const slot = addSlot(form, id, "client")
+            if (slot) next.push({ id, slot, form, kind: "client" })
+          })
+        }
+      }
 
-        // Payment notes are no longer part of the project information UI.
-        const paymentNotes = form.querySelector<HTMLTextAreaElement>('textarea[name="payment_notes"]')?.closest("label")
-        if (paymentNotes instanceof HTMLElement && !paymentNotes.hidden) paymentNotes.hidden = true
+      if (pageTitle === "Pipeline") {
+        const pipelineHeading = Array.from(document.querySelectorAll("h2")).find(
+          (node) => node.textContent?.trim() === "Lead history",
+        )
+        const pipelinePanel = pipelineHeading?.closest("[data-slot='card']") || pipelineHeading?.parentElement?.parentElement
+        if (pipelinePanel instanceof HTMLElement) {
+          pipelinePanel.querySelectorAll<HTMLFormElement>("details form").forEach((form, index) => {
+            const description = form.querySelector<HTMLTextAreaElement>('textarea[name="description"]')?.closest("label")
+            const notes = form.querySelector<HTMLTextAreaElement>('textarea[name="notes"]')?.closest("label")
+            const status = form.querySelector<HTMLSelectElement>('select[name="status"]')?.closest("label")
+            if (
+              description &&
+              notes &&
+              status &&
+              description.parentElement === notes.parentElement &&
+              description.parentElement === status.parentElement &&
+              status.nextElementSibling !== description
+            ) {
+              status.insertAdjacentElement("afterend", description)
+            }
 
-        const id = `project-${index}`
-        const slot = addSlot(form, id, "project")
-        if (slot) next.push({ id, slot, form, kind: "project" })
-      })
+            const id = `pipeline-${index}`
+            const slot = addSlot(form, id, "pipeline")
+            if (slot) next.push({ id, slot, form, kind: "pipeline" })
+          })
+        }
+      }
+
+      if (pageTitle === "Projects") {
+        document.querySelectorAll<HTMLFormElement>("form").forEach((form, index) => {
+          const isProject = Boolean(
+            form.querySelector('input[name="contact_email"]') &&
+            form.querySelector('select[name="stage"]') &&
+            form.querySelector('input[name="name"]'),
+          )
+          if (!isProject) return
+
+          const paymentNotes = form.querySelector<HTMLTextAreaElement>('textarea[name="payment_notes"]')?.closest("label")
+          if (paymentNotes instanceof HTMLElement && !paymentNotes.hidden) paymentNotes.hidden = true
+
+          const id = `project-${index}`
+          const slot = addSlot(form, id, "project")
+          if (slot) next.push({ id, slot, form, kind: "project" })
+        })
+        setProjectArchiveSlot((current) => {
+          const slot = addProjectArchiveSlot()
+          return current === slot ? current : slot
+        })
+      } else {
+        setProjectArchiveSlot((current) => current ? null : current)
+      }
 
       setTargets((current) => {
         if (
@@ -149,13 +180,32 @@ export function CrmEmailActions() {
       })
     }
 
+    const schedule = (delay = 100) => {
+      if (scanTimer) window.clearTimeout(scanTimer)
+      scanTimer = window.setTimeout(() => {
+        scanTimer = null
+        scan()
+      }, delay)
+    }
+
     scan()
-    const observer = new MutationObserver(scan)
-    observer.observe(document.body, { childList: true, subtree: true })
-    const timer = window.setInterval(scan, 800)
+    const interval = window.setInterval(scan, 1800)
+    const onClick = () => {
+      schedule(80)
+      window.setTimeout(() => schedule(60), 420)
+    }
+    const onFocus = () => schedule(50)
+    const onVisibility = () => document.visibilityState === "visible" && schedule(50)
+    document.addEventListener("click", onClick, true)
+    window.addEventListener("focus", onFocus)
+    document.addEventListener("visibilitychange", onVisibility)
+
     return () => {
-      observer.disconnect()
-      window.clearInterval(timer)
+      if (scanTimer) window.clearTimeout(scanTimer)
+      window.clearInterval(interval)
+      document.removeEventListener("click", onClick, true)
+      window.removeEventListener("focus", onFocus)
+      document.removeEventListener("visibilitychange", onVisibility)
     }
   }, [])
 
@@ -191,6 +241,58 @@ export function CrmEmailActions() {
     setMessage("")
   }
 
+  async function archiveTarget(target: EmailTarget) {
+    if (target.kind === "pipeline" || archiving) return
+    const resource = target.kind === "client" ? "clients" : "projects"
+    const singular = target.kind === "client" ? "client" : "project"
+    setArchiving(target.id)
+
+    try {
+      const activeResponse = await fetch(`/api/data/${resource}`, { cache: "no-store" })
+      const activeData = await activeResponse.json().catch(() => ({}))
+      if (!activeResponse.ok) throw new Error(activeData.error || `Could not load this ${singular}.`)
+
+      const rows = activeData.items || []
+      let row: Record<string, any> | undefined
+      if (target.kind === "client") {
+        const email = fieldValue(target.form, "email").toLowerCase()
+        const name = fieldValue(target.form, "name").toLowerCase()
+        const company = fieldValue(target.form, "company_name").toLowerCase()
+        row = rows.find((item: Record<string, any>) => {
+          const sameEmail = email && String(item.email || "").trim().toLowerCase() === email
+          const sameName = name && String(item.name || "").trim().toLowerCase() === name
+          const sameCompany = company && String(item.company_name || "").trim().toLowerCase() === company
+          return sameEmail || (sameName && (!company || sameCompany))
+        })
+      } else {
+        const name = fieldValue(target.form, "name").toLowerCase()
+        const client = fieldValue(target.form, "client").toLowerCase()
+        row = rows.find((item: Record<string, any>) =>
+          String(item.name || "").trim().toLowerCase() === name &&
+          String(item.client || "").trim().toLowerCase() === client,
+        )
+      }
+
+      if (!row) throw new Error(`Could not identify this ${singular}. Refresh and try again.`)
+      if (!confirm(`Archive ${row.name || `this ${singular}`}? You can restore it from the reserved archive.`)) return
+
+      const response = await fetch(`/api/archive/${resource}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ id: row.id, archived: true }),
+      })
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(data.error || `Could not archive this ${singular}.`)
+
+      toast.success(`${singular === "client" ? "Client" : "Project"} archived.`)
+      window.setTimeout(() => window.location.reload(), 120)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : `Could not archive this ${singular}.`)
+    } finally {
+      setArchiving(null)
+    }
+  }
+
   async function send(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!to.trim() || !subject.trim() || !message.trim()) return
@@ -216,18 +318,38 @@ export function CrmEmailActions() {
   return (
     <>
       {targets.map((target) => createPortal(
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => openComposer(target)}
-          title={connection.connected ? "Send email" : "Connect an email account first"}
-        >
-          <Mail size={15} />
-          Email
-        </Button>,
+        <>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => openComposer(target)}
+            title={connection.connected ? "Send email" : "Connect an email account first"}
+          >
+            <Mail size={15} />
+            Email
+          </Button>
+          {target.kind !== "pipeline" && (
+            <Button
+              type="button"
+              variant="outline"
+              disabled={archiving !== null}
+              className="border-amber-300/25 text-amber-100"
+              onClick={() => void archiveTarget(target)}
+            >
+              <Archive size={15} />
+              {archiving === target.id ? "Archiving…" : target.kind === "client" ? "Archive client" : "Archive project"}
+            </Button>
+          )}
+        </>,
         target.slot,
         target.id,
       ))}
+
+      {projectArchiveSlot && createPortal(
+        <ArchiveManagerButton resource="projects" label="Archive" className="h-8 border-cyan-300/25 bg-[#0b1524]/95 px-2 text-[11px] text-cyan-100" />,
+        projectArchiveSlot,
+        "project-archive-menu",
+      )}
 
       {composer && (
         <div className="fixed inset-0 z-[80] grid place-items-center bg-black/70 p-4">

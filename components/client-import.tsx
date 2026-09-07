@@ -1,6 +1,7 @@
 "use client"
 import {useRef,useState} from "react"
 import {Button} from "@/components/ui/button"
+import {ArchiveManagerButton} from "@/components/archive-manager"
 import {parseClientRows,parseClientCsv,ClientImportRow} from "@/lib/client-import"
 export function ClientImport({onImported}:{onImported:(items:Record<string,any>[])=>void}){
  const input=useRef<HTMLInputElement>(null)
@@ -22,7 +23,10 @@ export function ClientImport({onImported}:{onImported:(items:Record<string,any>[
  }
  return <div>
   <input ref={input} type="file" accept=".xlsx,.csv" className="hidden" onChange={event=>{void choose(event.target.files?.[0]);event.target.value=""}}/>
-  <Button type="button" disabled={busy} onClick={()=>input.current?.click()}>{busy?"Processing…":"Import clients"}</Button>
+  <div className="flex flex-wrap gap-2">
+    <Button type="button" disabled={busy} onClick={()=>input.current?.click()}>{busy?"Processing…":"Import clients"}</Button>
+    <ArchiveManagerButton resource="clients" label="Archive clients"/>
+  </div>
   <p className="mt-1 max-w-xs text-xs text-slate-400">Excel (.xlsx) or Google Sheets: File → Download → CSV. Columns: Name, Email, Phone.</p>
   {message&&<p role="status" className="mt-2 max-w-sm text-xs text-blue-200">{message}</p>}
   {rows&&<div role="dialog" aria-modal="true" aria-label="Import clients" className="fixed inset-0 z-[60] flex items-center justify-center bg-black/75 p-4"><div className="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-blue-300/30 bg-[#0b1320] p-5 text-white">
@@ -36,4 +40,3 @@ export function ClientImport({onImported}:{onImported:(items:Record<string,any>[
   </div></div>}
  </div>
 }
-

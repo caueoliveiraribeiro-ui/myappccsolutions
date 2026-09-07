@@ -4,21 +4,40 @@ import { getSession } from "@/lib/auth"
 import { db } from "@/lib/supabase"
 
 type Resource = "clients" | "projects"
+type Context = { params: Promise<{ resource: string }> }
 
 async function session() {
   const token = (await cookies()).get("orbit_session")?.value
   return token ? await getSession(token) : null
 }
 
-export async function PATCH(request: Request, { params }: { params: Promise<{ resource: string }> }) {
+async function resourceFrom(params: Context["params"]) {
+  const { resource } = await params
+  return resource === "clients" || resource === "projects" ? resource as Resource : null
+}
+
+export async function GET(_: Request, { params }: Context) {
   const user = await session()
   if (!user) return NextResponse.json({ error: "Please sign in again." }, { status: 401 })
 
-  const { resource: raw } = await params
-  if (raw !== "clients" && raw !== "projects") {
-    return NextResponse.json({ error: "This archive is unavailable." }, { status: 404 })
+  const resource = await resourceFrom(params)
+  if (!resource) return NextResponse.json({ error: "This archive is unavailable." }, { status: 404 })
+
+  try {
+    const items = await db(`${resource}?user_id=eq.${user.id}&archived=eq.true&select=*&order=updated_at.desc&limit=50`)
+    return NextResponse.json({ items: items || [], limit: 50 })
+  } catch (error) {
+    console.error("Orbit archive load failed", error)
+    return NextResponse.json({ error: "Archive storage is unavailable. Your active records are still safe." }, { status: 500 })
   }
-  const resource = raw as Resource
+}
+
+export async function PATCH(request: Request, { params }: Context) {
+  const user = await session()
+  if (!user) return NextResponse.json({ error: "Please sign in again." }, { status: 401 })
+
+  const resource = await resourceFrom(params)
+  if (!resource) return NextResponse.json({ error: "This archive is unavailable." }, { status: 404 })
 
   try {
     const body = await request.json()
