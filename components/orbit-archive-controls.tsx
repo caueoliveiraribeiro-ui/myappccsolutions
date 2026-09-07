@@ -57,7 +57,13 @@ export function OrbitArchiveControls() {
   }
 
   function addArchiveAction(form: HTMLFormElement, resource: "clients" | "projects", row: Row | undefined) {
-    if (!row || row.archived || form.querySelector(`[data-orbit-${resource}-archive-action]`)) return
+    if (!row || row.archived) return
+
+    const existingArchiveButton = Array.from(form.querySelectorAll("button")).find((button) =>
+      /(^|\s)archive(\s|$)/i.test((button.textContent || "").trim()),
+    )
+    if (existingArchiveButton || form.querySelector(`[data-orbit-${resource}-archive-action]`)) return
+
     const submit = form.querySelector('button[type="submit"]') as HTMLButtonElement | null
     if (!submit?.parentElement) return
     const action = document.createElement("button")
@@ -87,12 +93,7 @@ export function OrbitArchiveControls() {
     const onProjects = title === "Projects"
     const onSettings = title === "Settings"
 
-    // A project-only header must never survive a tab switch.
     if (!onProjects) document.querySelector("[data-orbit-project-archive-header]")?.remove()
-
-    // Most Orbit pages (Overview, Stocks, Crypto, Calendar, Reports, etc.) do
-    // not need archive DOM work. Returning here prevents repeated full-form
-    // scans from competing with animated/dynamic tabs.
     if (!onClients && !onProjects && !onSettings) return
 
     if (onSettings) {
@@ -132,8 +133,6 @@ export function OrbitArchiveControls() {
     }
 
     if (onProjects) {
-      // Keep Payment notes in React's DOM for data compatibility, but do not
-      // render it visually in the Project dropdown.
       document.querySelectorAll('textarea[name="payment_notes"]').forEach((textarea) => {
         const label = textarea.closest("label") as HTMLElement | null
         if (label && !label.hidden) label.hidden = true
@@ -188,9 +187,6 @@ export function OrbitArchiveControls() {
     refresh().catch(() => {})
     scheduleScan(0)
 
-    // Scans are bounded and page-scoped. There is deliberately no global
-    // MutationObserver here: dynamic tabs such as Stocks/Crypto can generate
-    // many DOM mutations while rendering prices and animations.
     const scanInterval = window.setInterval(() => scan(), 2200)
     const refreshInterval = window.setInterval(() => {
       const title = (document.querySelector("h1")?.textContent || "").trim()
