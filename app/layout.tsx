@@ -10,6 +10,7 @@ import { LeadDirectoryEmailControls } from "@/components/lead-directory-email-co
 import { CrmEmailActions } from "@/components/crm-email-actions"
 import { OrbitUserProfile } from "@/components/orbit-user-profile"
 import { OrbitProfilePreferenceSync } from "@/components/orbit-profile-preference-sync"
+import { OrbitArchiveControls } from "@/components/orbit-archive-controls"
 
 const figtree = Figtree({
   subsets: ["latin"],
@@ -37,6 +38,7 @@ export default function RootLayout({
         <CrmEmailActions />
         <OrbitUserProfile />
         <OrbitProfilePreferenceSync />
+        <OrbitArchiveControls />
         <Toaster richColors theme="dark" />
       </body>
     </html>
