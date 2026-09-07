@@ -59,9 +59,9 @@ export function OrbitUserProfile() {
   }
 
   function refreshDashboardProfile() {
-    // OperationsDashboard already refreshes /api/me on window focus. Reusing
-    // that existing path keeps regional/profile changes in React state without
-    // introducing another global DOM observer.
+    // Notify both the preference synchronizer and the existing dashboard
+    // /api/me refresh path after a successful profile write.
+    window.dispatchEvent(new CustomEvent("orbit:profile-updated"))
     window.dispatchEvent(new Event("focus"))
   }
 
@@ -132,36 +132,56 @@ export function OrbitUserProfile() {
 
   async function uploadAvatar(file?: File) {
     if (!file) return
-    const data = new FormData()
-    data.append("avatar", file)
-    const r = await fetch("/api/profile/avatar", { method: "POST", body: data })
-    const d = await r.json().catch(() => ({}))
-    if (!r.ok) return toast.error(d.error || "We could not update your photo.")
-    const next = { ...(profile || {}), avatar_url: d.avatar_url }
-    setProfile(next)
-    syncSidebar(next)
-    refreshDashboardProfile()
-    toast.success("Profile photo updated.")
+    try {
+      const data = new FormData()
+      data.append("avatar", file)
+      const r = await fetch("/api/profile/avatar", { method: "POST", body: data })
+      const d = await r.json().catch(() => ({}))
+      if (!r.ok) return toast.error(d.error || "We could not update your photo.")
+      const next = { ...(profile || {}), avatar_url: d.avatar_url }
+      setProfile(next)
+      syncSidebar(next)
+      refreshDashboardProfile()
+      toast.success("Profile photo updated.")
+    } catch {
+      toast.error("The profile photo could not be uploaded. Please check your connection and try again.")
+    }
   }
 
   async function saveProfile(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (!profile) return
+    if (!profile || saving) return
+
     setSaving(true)
-    const values = Object.fromEntries(new FormData(event.currentTarget))
-    const r = await fetch("/api/profile/settings", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(values),
-    })
-    const d = await r.json().catch(() => ({}))
-    setSaving(false)
-    if (!r.ok) return toast.error(d.error || "We could not save your profile.")
-    const next = { ...profile, ...d }
-    setProfile(next)
-    syncSidebar(next)
-    refreshDashboardProfile()
-    toast.success("Profile saved and applied across Orbit.")
+    try {
+      const values = Object.fromEntries(new FormData(event.currentTarget))
+      const r = await fetch("/api/profile/settings", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(values),
+      })
+      const d = await r.json().catch(() => ({}))
+      if (!r.ok) {
+        toast.error(d.error || "We could not save your profile.")
+        return
+      }
+
+      const { partial, missing_fields, ...savedProfile } = d
+      const next = { ...profile, ...savedProfile }
+      setProfile(next)
+      syncSidebar(next)
+      refreshDashboardProfile()
+
+      if (partial) {
+        toast.warning("Your main preferences were saved, but the profile database is missing newer fields. Run the latest Orbit profile SQL update once to enable every field.")
+      } else {
+        toast.success("Profile saved and applied across Orbit.")
+      }
+    } catch {
+      toast.error("The profile save request could not reach Orbit. Please check your connection and try again.")
+    } finally {
+      setSaving(false)
+    }
   }
 
   async function changePassword(event: FormEvent<HTMLFormElement>) {
@@ -169,17 +189,24 @@ export function OrbitUserProfile() {
     const form = event.currentTarget
     const values = Object.fromEntries(new FormData(form)) as Record<string, string>
     if (values.newPassword !== values.confirmPassword) return toast.error("The new passwords do not match.")
+    if (passwordBusy) return
+
     setPasswordBusy(true)
-    const r = await fetch("/api/profile/password", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ currentPassword: values.currentPassword, newPassword: values.newPassword }),
-    })
-    const d = await r.json().catch(() => ({}))
-    setPasswordBusy(false)
-    if (!r.ok) return toast.error(d.error || "We could not change your password.")
-    form.reset()
-    toast.success("Password changed securely.")
+    try {
+      const r = await fetch("/api/profile/password", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ currentPassword: values.currentPassword, newPassword: values.newPassword }),
+      })
+      const d = await r.json().catch(() => ({}))
+      if (!r.ok) return toast.error(d.error || "We could not change your password.")
+      form.reset()
+      toast.success("Password changed securely.")
+    } catch {
+      toast.error("The password request could not reach Orbit. Please try again.")
+    } finally {
+      setPasswordBusy(false)
+    }
   }
 
   if (!open) return null
@@ -214,7 +241,7 @@ export function OrbitUserProfile() {
                 <Field label="Phone" name="phone" defaultValue={profile?.phone}/>
                 <Field label="Job title" name="job_title" defaultValue={profile?.job_title}/>
                 <Field label="Company" name="company" defaultValue={profile?.company}/>
-                <Field label="Website" name="website" type="url" defaultValue={profile?.website}/>
+                <Field label="Website" name="website" defaultValue={profile?.website} placeholder="https://example.com"/>
               </div>
               <label className="mt-3 block text-xs text-slate-400">About you<textarea name="bio" maxLength={500} defaultValue={profile?.bio || ""} rows={3} className="mt-1 w-full resize-y rounded-xl border border-white/10 bg-[#091522] px-3 py-2 text-sm text-white outline-none focus:border-cyan-300/40" placeholder="A short note about your role, priorities or workspace."/></label>
             </section>
