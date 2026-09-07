@@ -9,6 +9,7 @@ import { LeadsManagerGoogleOnly } from "@/components/leads-manager-google-only"
 import { LeadDirectoryEmailControls } from "@/components/lead-directory-email-controls"
 import { CrmEmailActions } from "@/components/crm-email-actions"
 import { OrbitUserProfile } from "@/components/orbit-user-profile"
+import { OrbitProfilePreferenceSync } from "@/components/orbit-profile-preference-sync"
 
 const figtree = Figtree({
   subsets: ["latin"],
@@ -35,6 +36,7 @@ export default function RootLayout({
         <LeadDirectoryEmailControls />
         <CrmEmailActions />
         <OrbitUserProfile />
+        <OrbitProfilePreferenceSync />
         <Toaster richColors theme="dark" />
       </body>
     </html>
