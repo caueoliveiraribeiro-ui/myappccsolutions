@@ -68,29 +68,50 @@ export async function POST(request: Request) {
       saved = rows?.[0] || profile
     } catch (fullSaveError) {
       // Older Orbit databases may not yet have every newer profile column.
-      // One optional field must not prevent core preferences (currency,
-      // language and country) from being persisted.
+      // One optional field must not prevent core preferences from being persisted.
       const existingRows = await db(`user_profiles?user_id=eq.${encodeURIComponent(user.id)}&select=*&limit=1`)
       const existing = existingRows?.[0]
 
-      if (!existing) throw fullSaveError
+      if (!existing) {
+        if (!looksLikeSchemaError(fullSaveError)) throw fullSaveError
 
-      const supported = new Set(Object.keys(existing))
-      const changes = Object.fromEntries(
-        Object.entries(profile).filter(([key]) => key !== "user_id" && supported.has(key)),
-      )
-      missingFields = Object.keys(profile).filter(
-        (key) => key !== "user_id" && !supported.has(key),
-      )
+        // Legacy databases can be missing both the newer columns and the
+        // user's profile row. Create the smallest row supported by the
+        // original user_profiles schema so the account is never stuck in a
+        // permanent save failure while the migration is pending.
+        const coreProfile = {
+          user_id: user.id,
+          name,
+          email: user.email,
+          updated_at: profile.updated_at,
+        }
+        const rows = await db("user_profiles?on_conflict=user_id", {
+          method: "POST",
+          headers: { Prefer: "resolution=merge-duplicates,return=representation" },
+          body: JSON.stringify(coreProfile),
+        })
+        saved = rows?.[0] || coreProfile
+        missingFields = Object.keys(profile).filter(
+          (key) => !["user_id", "name", "email", "updated_at"].includes(key),
+        )
+      } else {
+        const supported = new Set(Object.keys(existing))
+        const changes = Object.fromEntries(
+          Object.entries(profile).filter(([key]) => key !== "user_id" && supported.has(key)),
+        )
+        missingFields = Object.keys(profile).filter(
+          (key) => key !== "user_id" && !supported.has(key),
+        )
 
-      const rows = await db(`user_profiles?user_id=eq.${encodeURIComponent(user.id)}`, {
-        method: "PATCH",
-        body: JSON.stringify(changes),
-      })
-      saved = rows?.[0] || { ...existing, ...changes }
+        const rows = await db(`user_profiles?user_id=eq.${encodeURIComponent(user.id)}`, {
+          method: "PATCH",
+          body: JSON.stringify(changes),
+        })
+        saved = rows?.[0] || { ...existing, ...changes }
 
-      if (!looksLikeSchemaError(fullSaveError) && missingFields.length === 0) {
-        throw fullSaveError
+        if (!looksLikeSchemaError(fullSaveError) && missingFields.length === 0) {
+          throw fullSaveError
+        }
       }
     }
 
