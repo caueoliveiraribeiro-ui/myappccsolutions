@@ -1,7 +1,7 @@
 "use client"
 
 import { FormEvent, useMemo, useState } from "react"
-import { FileDown, Mail, Plus, Printer, Send, Trash2 } from "lucide-react"
+import { CalendarDays, CheckCircle2, FileText, Mail, Plus, Printer, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -9,14 +9,22 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 
 type Row = Record<string, any>
-const money = (amount: unknown, currency: string) => new Intl.NumberFormat(undefined, { style: "currency", currency }).format(Number(amount || 0))
-const escapeHtml = (value: unknown) => String(value || "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char] || char))
+const money = (amount: unknown, currency: string) => new Intl.NumberFormat(undefined, { style: "currency", currency: /^[A-Z]{3}$/.test(currency) ? currency : "USD" }).format(Number(amount || 0))
+const formatDate = (value: unknown) => value ? new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(new Date(String(value))) : "On receipt"
+const statusClass: Record<string, string> = {
+  draft: "border-slate-400/25 bg-slate-400/10 text-slate-200",
+  sent: "border-cyan-300/25 bg-cyan-300/10 text-cyan-100",
+  paid: "border-emerald-300/25 bg-emerald-300/10 text-emerald-100",
+  overdue: "border-amber-300/25 bg-amber-300/10 text-amber-100",
+  void: "border-red-300/25 bg-red-300/10 text-red-100",
+}
 
 export function InvoiceWorkspace({ invoices = [], clients = [], projects = [], currency = "USD", onCreated, edit, del }: Row) {
   const [selectedClient, setSelectedClient] = useState("")
   const [sending, setSending] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
   const nextNumber = useMemo(() => `ORB-${new Date().getFullYear()}-${String(invoices.length + 1).padStart(4, "0")}`, [invoices.length])
+  const client = clients.find((item: Row) => item.id === selectedClient)
 
   async function createInvoice(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -24,25 +32,22 @@ export function InvoiceWorkspace({ invoices = [], clients = [], projects = [], c
     setCreating(true)
     try {
       const values = Object.fromEntries(new FormData(event.currentTarget))
-      const response = await fetch("/api/invoices", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ ...values, amount: Number(values.amount || 0), currency, status: String(values.status || "draft") }) })
+      const response = await fetch("/api/invoices", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ ...values, amount: Number(values.amount || 0), currency, status: String(values.status || "draft") }),
+      })
       const data = await response.json().catch(() => ({}))
-      if (!response.ok || !data.invoice) throw new Error(data.error || "Invoice could not be created.")
-      onCreated?.(data.invoice)
+      if (!response.ok || !data.invoice?.id) throw new Error(data.error || "We could not create this invoice.")
+      await onCreated?.(data.invoice)
       event.currentTarget.reset()
       setSelectedClient("")
-      toast.success("Invoice created.")
+      toast.success(`Invoice ${data.invoice.invoice_number} is ready.`)
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "We could not create this invoice. Please try again.")
     } finally {
       setCreating(false)
     }
-  }
-
-  function printInvoice(invoice: Row) {
-    const popup = window.open("", "_blank", "noopener,noreferrer,width=900,height=760")
-    if (!popup) return toast.error("Allow pop-ups to export this invoice as a PDF.")
-    popup.document.write(`<!doctype html><html><head><title>Invoice ${escapeHtml(invoice.invoice_number)}</title><style>body{font-family:Arial,sans-serif;color:#111827;padding:48px;max-width:760px;margin:auto}header{display:flex;justify-content:space-between;border-bottom:3px solid #22d3ee;padding-bottom:22px}h1{margin:0;font-size:32px}.meta{color:#475569;line-height:1.7}.total{margin-top:32px;background:#ecfeff;padding:20px;font-size:24px;font-weight:700;text-align:right}.notes{margin-top:30px;border-top:1px solid #cbd5e1;padding-top:18px;white-space:pre-wrap}@media print{body{padding:18px}}</style></head><body><header><div><h1>Orbit LM</h1><div class="meta">Life Management</div></div><div class="meta"><b>INVOICE</b><br>${escapeHtml(invoice.invoice_number)}<br>Issued ${escapeHtml(String(invoice.issue_date || "").slice(0, 10))}</div></header><section class="meta" style="margin-top:28px"><b>Bill to</b><br>${escapeHtml(invoice.client_name)}<br>${escapeHtml(invoice.client_email)}</section><section style="margin-top:32px"><b>${escapeHtml(invoice.service_name || "Service")}</b><div class="meta">Due ${escapeHtml(String(invoice.due_date || "On receipt").slice(0, 10))}</div></section><div class="total">Total: ${escapeHtml(money(invoice.amount, invoice.currency || currency))}</div>${invoice.notes ? `<div class="notes"><b>Notes</b><br>${escapeHtml(invoice.notes)}</div>` : ""}<script>window.onload=()=>window.print()<\/script></body></html>`)
-    popup.document.close()
   }
 
   async function sendInvoice(invoice: Row) {
@@ -52,7 +57,7 @@ export function InvoiceWorkspace({ invoices = [], clients = [], projects = [], c
       const data = await response.json().catch(() => ({}))
       if (!response.ok) throw new Error(data.error || "We could not send this invoice.")
       if (data.invoice) await edit(invoice.id, data.invoice)
-      toast.success("Invoice email sent with a PDF attachment.")
+      toast.success("Invoice email sent with its PDF attached.")
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "We could not send this invoice.")
     } finally {
@@ -60,6 +65,44 @@ export function InvoiceWorkspace({ invoices = [], clients = [], projects = [], c
     }
   }
 
-  return <div className="space-y-4"><Card className="border-cyan-300/20 bg-[#07111f] p-0 text-white"><details className="group"><summary className="flex cursor-pointer list-none items-center justify-between p-5"><div><h2 className="text-lg font-semibold">Create invoice</h2><p className="mt-1 text-sm text-slate-400">Use your saved client or project information, then export or email the finished invoice.</p></div><Plus className="text-cyan-200 transition group-open:rotate-45"/></summary><form className="grid gap-3 border-t border-white/10 p-5 md:grid-cols-2" onSubmit={createInvoice}><label className="text-xs text-slate-400">Saved client<select value={selectedClient} onChange={(event) => setSelectedClient(event.target.value)} className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#091522] px-3 text-sm"><option value="">Choose a client (optional)</option>{clients.map((client: Row) => <option key={client.id} value={client.id}>{client.name}{client.company_name ? ` · ${client.company_name}` : ""}</option>)}</select></label><label className="text-xs text-slate-400">Related project<select name="project_id" className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#091522] px-3 text-sm"><option value="">No linked project</option>{projects.map((project: Row) => <option key={project.id} value={project.id}>{project.name}</option>)}</select></label>{(() => { const client = clients.find((item: Row) => item.id === selectedClient); return <><input type="hidden" name="client_id" value={selectedClient}/><label className="text-xs text-slate-400">Client name<Input name="client_name" required defaultValue={client?.name || ""}/></label><label className="text-xs text-slate-400">Client email<Input name="client_email" type="email" defaultValue={client?.email || ""}/></label><label className="text-xs text-slate-400">Invoice number<Input name="invoice_number" required defaultValue={nextNumber}/></label><label className="text-xs text-slate-400">Service<Input name="service_name" defaultValue={client?.service || ""}/></label></> })()}<label className="text-xs text-slate-400">Amount ({currency})<Input name="amount" required type="number" min="0" step="0.01"/></label><label className="text-xs text-slate-400">Issue date<Input name="issue_date" type="date" defaultValue={new Date().toISOString().slice(0, 10)}/></label><label className="text-xs text-slate-400">Due date<Input name="due_date" type="date"/></label><label className="text-xs text-slate-400">Status<select name="status" className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#091522] px-3 text-sm"><option value="draft">Draft</option><option value="sent">Sent</option><option value="paid">Paid</option></select></label><label className="text-xs text-slate-400 md:col-span-2">Notes<Textarea name="notes" className="mt-1" placeholder="Payment instructions or a personal note."/></label><Button disabled={creating} className="md:col-span-2 bg-cyan-300 text-slate-950">{creating ? "Creating invoice…" : "Create invoice"}</Button></form></details></Card><Card className="border-white/10 bg-white/5 p-5 text-white"><h2 className="mb-4 font-semibold">Invoices</h2><div className="space-y-2">{invoices.length === 0 && <p className="text-sm text-slate-500">No invoices yet. Create one from a client or project above.</p>}{invoices.map((invoice: Row) => <details key={invoice.id} className="rounded-xl border border-white/[.08] bg-black/20"><summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-3 p-3"><div><b className="block text-sm">{invoice.invoice_number} · {invoice.client_name}</b><p className="text-xs text-slate-500">{invoice.service_name || "Service"} · due {String(invoice.due_date || "on receipt").slice(0, 10)}</p></div><b className="text-cyan-100">{money(invoice.amount, invoice.currency || currency)}</b></summary><div className="grid gap-3 border-t border-white/10 p-4 md:grid-cols-2"><label className="text-xs text-slate-400">Status<select value={invoice.status} onChange={(event) => edit(invoice.id, { status: event.target.value })} className="mt-1 h-9 w-full rounded-md border border-white/10 bg-[#111827] px-3"><option value="draft">Draft</option><option value="sent">Sent</option><option value="paid">Paid</option><option value="overdue">Overdue</option><option value="void">Void</option></select></label><p className="self-end text-xs text-slate-500">{invoice.client_email || "No email added"}</p><div className="flex flex-wrap gap-2 md:col-span-2"><Button size="sm" variant="outline" asChild><a href={`/api/invoices/${encodeURIComponent(invoice.id)}/pdf`} target="_blank" rel="noreferrer"><Printer size={14}/>Download PDF</a></Button><Button size="sm" onClick={() => sendInvoice(invoice)} disabled={sending === invoice.id} className="bg-cyan-300 text-slate-950"><Mail size={14}/>{sending === invoice.id ? "Sending…" : "Email invoice"}</Button><Button size="sm" variant="outline" className="border-red-400/30 text-red-200" onClick={() => confirm(`Delete ${invoice.invoice_number}?`) && del(invoice.id)}><Trash2 size={14}/>Delete</Button></div></div></details>)}</div></Card></div>
-}
+  return <div className="space-y-5">
+    <Card className="overflow-hidden border-cyan-300/25 bg-[linear-gradient(135deg,rgba(7,17,31,.98),rgba(14,32,52,.96))] p-0 text-white shadow-[0_18px_65px_rgba(0,0,0,.22)]">
+      <details className="group" open>
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-4 p-5 sm:p-6">
+          <div className="flex items-center gap-4"><span className="grid h-11 w-11 place-items-center rounded-2xl border border-cyan-300/30 bg-cyan-300/10 text-cyan-200"><FileText size={21}/></span><div><h2 className="font-semibold">Create a polished invoice</h2><p className="mt-1 text-sm text-slate-400">Create, download, or email a branded PDF from one secure workspace.</p></div></div>
+          <Plus className="shrink-0 text-cyan-200 transition group-open:rotate-45"/>
+        </summary>
+        <form className="grid gap-4 border-t border-cyan-300/15 bg-black/10 p-5 sm:p-6 md:grid-cols-2" onSubmit={createInvoice}>
+          <label className="text-xs font-medium text-slate-300">Saved client
+            <select value={selectedClient} onChange={(event) => setSelectedClient(event.target.value)} className="mt-1.5 h-11 w-full rounded-xl border border-white/10 bg-[#07111f] px-3 text-sm text-white">
+              <option value="">Create for a new client</option>{clients.map((item: Row) => <option key={item.id} value={item.id}>{item.name}{item.company_name ? ` · ${item.company_name}` : ""}</option>)}
+            </select>
+          </label>
+          <label className="text-xs font-medium text-slate-300">Related project
+            <select name="project_id" className="mt-1.5 h-11 w-full rounded-xl border border-white/10 bg-[#07111f] px-3 text-sm text-white"><option value="">No linked project</option>{projects.map((project: Row) => <option key={project.id} value={project.id}>{project.name}</option>)}</select>
+          </label>
+          <input type="hidden" name="client_id" value={selectedClient}/>
+          <label className="text-xs font-medium text-slate-300">Client name<Input key={`name-${selectedClient}`} name="client_name" required defaultValue={client?.name || ""} className="mt-1.5 h-11"/></label>
+          <label className="text-xs font-medium text-slate-300">Client email<Input key={`email-${selectedClient}`} name="client_email" type="email" defaultValue={client?.email || ""} className="mt-1.5 h-11"/></label>
+          <label className="text-xs font-medium text-slate-300">Invoice number<Input name="invoice_number" required defaultValue={nextNumber} className="mt-1.5 h-11"/></label>
+          <label className="text-xs font-medium text-slate-300">Service / deliverable<Input key={`service-${selectedClient}`} name="service_name" defaultValue={client?.service || ""} placeholder="e.g. Website development" className="mt-1.5 h-11"/></label>
+          <label className="text-xs font-medium text-slate-300">Total due ({currency})<Input name="amount" required type="number" min="0" step="0.01" placeholder="0.00" className="mt-1.5 h-11"/></label>
+          <label className="text-xs font-medium text-slate-300">Issue date<Input name="issue_date" type="date" defaultValue={new Date().toISOString().slice(0, 10)} className="mt-1.5 h-11"/></label>
+          <label className="text-xs font-medium text-slate-300">Payment due date<Input name="due_date" type="date" className="mt-1.5 h-11"/></label>
+          <label className="text-xs font-medium text-slate-300">Invoice status
+            <select name="status" defaultValue="draft" className="mt-1.5 h-11 w-full rounded-xl border border-white/10 bg-[#07111f] px-3 text-sm text-white"><option value="draft">Draft</option><option value="sent">Sent</option><option value="paid">Paid</option></select>
+          </label>
+          <label className="text-xs font-medium text-slate-300 md:col-span-2">Message or payment notes<Textarea name="notes" className="mt-1.5 min-h-24" placeholder="Thank you for your business. Add payment instructions or a personal note."/></label>
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-cyan-300/15 bg-cyan-300/[.05] p-4 text-sm text-slate-300 md:col-span-2"><span className="flex items-center gap-2"><CheckCircle2 size={17} className="text-cyan-200"/>A branded PDF is generated only after the invoice is saved.</span><Button disabled={creating} className="min-w-44 bg-cyan-300 text-slate-950 hover:bg-cyan-200">{creating ? "Saving invoice…" : "Create invoice"}</Button></div>
+        </form>
+      </details>
+    </Card>
 
+    <Card className="border-white/10 bg-white/[.035] p-5 text-white sm:p-6"><div className="mb-5 flex flex-wrap items-end justify-between gap-3"><div><h2 className="font-semibold">Invoice workspace</h2><p className="mt-1 text-sm text-slate-400">Every saved invoice stays editable, downloadable, and ready to send.</p></div><span className="rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-1 text-xs text-cyan-100">{invoices.length} saved</span></div>
+      <div className="space-y-3">{invoices.length === 0 && <div className="rounded-2xl border border-dashed border-cyan-300/20 bg-cyan-300/[.035] p-8 text-center text-sm text-slate-400">Your first branded invoice will appear here after you create it.</div>}
+      {invoices.map((invoice: Row) => <details key={invoice.id} className="overflow-hidden rounded-2xl border border-white/[.09] bg-[#06101d]/80"><summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-4 p-4"><div className="flex min-w-0 items-center gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-cyan-300/10 text-cyan-200"><FileText size={18}/></span><div className="min-w-0"><b className="block truncate text-sm">{invoice.invoice_number} · {invoice.client_name}</b><p className="mt-1 truncate text-xs text-slate-500">{invoice.service_name || "Professional services"} · due {formatDate(invoice.due_date)}</p></div></div><div className="flex items-center gap-3"><b className="text-cyan-100">{money(invoice.amount, invoice.currency || currency)}</b><span className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide ${statusClass[invoice.status] || statusClass.draft}`}>{invoice.status || "draft"}</span></div></summary>
+        <div className="grid gap-4 border-t border-white/10 p-4 md:grid-cols-2"><label className="text-xs text-slate-400">Status<select value={invoice.status || "draft"} onChange={(event) => edit(invoice.id, { status: event.target.value })} className="mt-1.5 h-10 w-full rounded-xl border border-white/10 bg-[#091522] px-3 text-sm text-white"><option value="draft">Draft</option><option value="sent">Sent</option><option value="paid">Paid</option><option value="overdue">Overdue</option><option value="void">Void</option></select></label><div className="rounded-xl border border-white/[.08] bg-black/20 p-3 text-xs text-slate-400"><CalendarDays size={14} className="mb-1 text-cyan-200"/>Issued {formatDate(invoice.issue_date)}<br/>{invoice.client_email || "No recipient email yet"}</div><div className="flex flex-wrap gap-2 md:col-span-2"><Button size="sm" variant="outline" asChild><a href={`/api/invoices/${encodeURIComponent(invoice.id)}/pdf`} target="_blank" rel="noreferrer"><Printer size={14}/>Download PDF</a></Button><Button size="sm" onClick={() => sendInvoice(invoice)} disabled={sending === invoice.id} className="bg-cyan-300 text-slate-950"><Mail size={14}/>{sending === invoice.id ? "Sending…" : "Email PDF"}</Button><Button size="sm" variant="outline" className="border-red-400/30 text-red-200" onClick={() => confirm(`Delete ${invoice.invoice_number}?`) && del(invoice.id)}><Trash2 size={14}/>Delete</Button></div></div>
+      </details>)}</div>
+    </Card>
+  </div>
+}
