@@ -7,4 +7,9 @@ export function verifyUserPassword(password:string,salt:string,hash:string){cons
 export function createSession(email:string,id=OWNER_ID){const expiry=Date.now()+1000*60*60*12,payload=Buffer.from(JSON.stringify({id,email,expiry})).toString("base64url"),signature=createHmac("sha256",secret()).update(payload).digest("base64url");return `${payload}.${signature}`}
 export async function getSession(token:string){try{const[payload,signature]=token.split(".");if(!payload||!signature)return null;const expected=createHmac("sha256",secret()).update(payload).digest("base64url"),a=Buffer.from(signature),b=Buffer.from(expected);if(a.length!==b.length||!timingSafeEqual(a,b))return null;const data=JSON.parse(Buffer.from(payload,"base64url").toString());if(!(data.expiry>Date.now()&&data.id&&data.email))return null;if(data.id!==OWNER_ID){const users=await db(`app_users?id=eq.${encodeURIComponent(data.id)}&email=eq.${encodeURIComponent(data.email)}&select=id&limit=1`);if(!users?.some((user:{id:string})=>user.id===data.id))return null}return data}catch{return null}}
 export async function verifySession(token:string){return Boolean(await getSession(token))}
-function secret(){return process.env.SESSION_SECRET||"development-only-change-before-production"}
+function secret(){
+ const configured=process.env.SESSION_SECRET
+ if(configured&&configured.length>=32)return configured
+ if(process.env.NODE_ENV!=="production")return "development-only-change-before-production"
+ throw new Error("SESSION_SECRET_MISSING")
+}

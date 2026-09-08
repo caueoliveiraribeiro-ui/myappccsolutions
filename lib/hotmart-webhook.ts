@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto"
 import { db } from "@/lib/supabase"
 import { hashUserPassword } from "@/lib/auth"
-import { tokenHash } from "@/lib/registration"
+import { tokenHash } from "@/lib/password-tokens"
 import { sendAccountSetupEmail } from "@/lib/account-setup-email"
 
 const offerPlans = {

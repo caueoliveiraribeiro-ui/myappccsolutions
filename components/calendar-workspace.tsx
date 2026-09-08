@@ -914,7 +914,7 @@ export function CalendarWorkspace({
               <YearView
                 cursor={cursor}
                 events={visibleEvents}
-                onOpenMonth={(month) => {
+                onOpenMonth={(month: Date) => {
                   setCursor(month)
                   setView("month")
                 }}

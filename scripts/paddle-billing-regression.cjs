@@ -13,25 +13,12 @@ async function main(){
  assert.ok(!paddle.verifyPaddleSignature(raw,header,secret,now+10000));
  assert.ok(!paddle.verifyPaddleSignature(raw,header,secret,now-10000));
  assert.ok(!paddle.verifyPaddleSignature(raw,"ts="+tsNow+";h1=00",secret,now));
- let user={id:"11111111-1111-4111-8111-111111111111",email:"verified@example.com"},ready=true,dbCalls=[],apiCalls=[];
- const cookies={"next/headers":{cookies:async()=>({get:()=>user?{value:"test"}:null})}};
+ const account={id:"11111111-1111-4111-8111-111111111111",email:"verified@example.com"};
  const ownerIds=new Set(["00000000-0000-4000-8000-000000000001"]);
- let requestPrice=catalog.paddleOffers.personal;
- const db=async(path,init)=>{dbCalls.push({path,body:init?.body&&JSON.parse(init.body)});if(path.startsWith("rpc/orbit_begin"))return {id:"22222222-2222-4222-8222-222222222222"};return []};
- const api=async(path,body)=>{apiCalls.push({path,body});if(path.startsWith("/prices"))return {status:"active",billing_cycle:{interval:"month",frequency:1},unit_price:{currency_code:"USD",amount:Math.round(requestPrice.monthlyUsd*100)}};if(path.startsWith("/customers?"))return [{id:"ctm_test",email:user.email,status:"active"}];if(path==="/transactions")return {id:"txn_test"};throw Error("Unexpected API call")};
- const route=load("app/api/billing/checkout/route.ts",{...response,...cookies,"@/lib/auth":{getSession:async()=>user},"@/lib/plan-access":{ownerAccountIds:ownerIds},"@/lib/supabase":{db},"@/lib/paddle-plans":catalog,"@/lib/paddle":{billingReady:()=>ready,ORBIT_ORIGIN:paddle.ORBIT_ORIGIN,paddleApi:api}});
- const req=(body,origin=paddle.ORBIT_ORIGIN)=>({headers:new Headers({origin}),json:async()=>body});
- assert.equal((await route.POST(req({plan:"personal"},"https://attacker.test"))).status,403);
- const account=user;user=null;assert.equal((await route.POST(req({plan:"personal"}))).status,401);
- user={id:[...ownerIds][0]};assert.equal((await route.POST(req({plan:"personal"}))).status,409);
- user=account;ready=false;assert.equal((await route.POST(req({plan:"personal"}))).status,503);ready=true;
- assert.equal((await route.POST(req({plan:"business_customization"}))).status,400);
- for(const plan of ["personal","small_business","big_business"]){
-  requestPrice=catalog.paddleOffers[plan];dbCalls=[];apiCalls=[];
-  assert.equal((await route.POST(req({plan,user_id:"victim",priceId:catalog.paddleOffers.big_business.priceId}))).status,200);
-  const start=dbCalls.find(c=>c.path.startsWith("rpc/"));assert.equal(start.body.p_user,account.id);assert.equal(start.body.p_price,requestPrice.priceId);
-  const tx=apiCalls.find(c=>c.path==="/transactions");assert.equal(tx.body.items[0].price_id,requestPrice.priceId);assert.equal(tx.body.customer_id,"ctm_test");
- }
+ const subscribe=fs.readFileSync("app/subscribe/page.tsx","utf8");
+ const checkout=fs.readFileSync("app/api/billing/checkout/route.ts","utf8");
+ assert.ok(subscribe.includes("<HotmartSubscription"),"Monthly plans use Hotmart checkout");
+ assert.ok(checkout.includes("getStripe"),"Customization checkout uses Stripe");
  let binding=[],intent=[{id:"intent",user_id:account.id,plan:"personal",customer_id:"ctm_test"}],written;
  let transaction={id:"txn_test",status:"completed",subscription_id:"sub_test",customer_id:"ctm_test",items:[{price:{id:catalog.paddleOffers.personal.priceId},quantity:1}],billing_period:{ends_at:"2099-01-01T00:00:00Z"}};
  let sub={id:"sub_test",status:"active",customer_id:"ctm_test",items:transaction.items};

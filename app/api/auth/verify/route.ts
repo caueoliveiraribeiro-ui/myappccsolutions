@@ -1,6 +1,7 @@
 import {NextResponse} from "next/server"
 import {db} from "@/lib/supabase"
-import {APP_ORIGIN,tokenHash} from "@/lib/registration"
+import {APP_ORIGIN} from "@/lib/registration"
+import {tokenHash} from "@/lib/password-tokens"
 const headers={"Content-Type":"text/html; charset=utf-8","Cache-Control":"no-store","Referrer-Policy":"no-referrer","Content-Security-Policy":"default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'"}
 function page(body:string,status=200){return new Response(`<!doctype html><html lang="en"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Verify your Orbit LM account</title><style>body{background:#071320;color:#ecfeff;font-family:system-ui;display:grid;place-items:center;min-height:90vh;margin:20px}main{max-width:440px;padding:36px;border:1px solid #22d3ee66;border-radius:24px;background:#0c253b}p{line-height:1.7;color:#b2cad7}button,a{display:inline-block;background:#67e8f9;color:#082f49;border:0;border-radius:12px;padding:14px 20px;font-weight:600;text-decoration:none;cursor:pointer}</style><main><h1>Welcome to your Orbit.</h1>${body}</main></html>`,{status,headers})}
 export async function GET(request:Request){const token=new URL(request.url).searchParams.get("token")||"";if(!/^[a-f0-9]{64}$/.test(token))return page('<p>This verification link is invalid. Please request a new one.</p><a href="/">Return to Orbit</a>',400);return page(`<p>Confirm your email to finish creating your account. Then sign in and choose the plan that fits your life.</p><form method="post"><input type="hidden" name="token" value="${token}"><button type="submit">Verify my email</button></form>`)}

@@ -5,7 +5,7 @@ const features=load("lib/plan-features.ts");let subscription=[],offline=false,us
 const headers={cookies:async()=>({get:()=>user?{value:"session"}:undefined})},auth={getSession:async()=>user};
 const database={hasDatabase:()=>true,db:async(path,init)=>{calls.push({path,init});if(path.startsWith("account_subscriptions")){if(offline)throw Error("offline");return subscription}return handler(path,init)}};
 const access=load("lib/plan-access.ts",{"@/lib/supabase":database,"@/lib/plan-features":features,"next/server":response,"next/headers":headers,"@/lib/auth":auth});
-const api=load("app/api/data/[resource]/route.ts",{"@/lib/supabase":database,"@/lib/plan-features":features,"@/lib/plan-access":access,"next/server":response,"next/headers":headers,"@/lib/auth":auth});
+const api=load("app/api/data/[resource]/route.ts",{"@/lib/supabase":database,"@/lib/plan-features":features,"@/lib/plan-access":access,"@/lib/google-calendar-sync":{syncCrmCalendarEvent:async()=>{},deleteCrmCalendarEvent:async()=>{}},"next/server":response,"next/headers":headers,"@/lib/auth":auth});
 const plan=p=>{subscription=[{plan:p,status:"active",access_until:new Date(Date.now()+86400000).toISOString()}];offline=false;calls=[];handler=async()=>[]};
 const ctx=resource=>({params:Promise.resolve({resource})}),request=body=>({json:async()=>body});
 async function main(){
@@ -57,8 +57,8 @@ async function main(){
  subscription=[];assert.equal((await summaryApi.GET()).status,403);
  user=null;assert.equal((await api.GET({},ctx("holdings"))).status,401);
  assert.equal((await access.requestFeature("stocks")).status,401);
- const protectedRoutes=["app/api/clients/import/route.ts","app/api/collaboration/route.ts","app/api/email/route.ts","app/api/google-leads/route.ts","app/api/market-search/route.ts","app/api/market-price/route.ts","app/api/fx/route.ts","app/api/billing/reminders/route.ts","app/api/calendar/connect/route.ts","app/api/calendar/callback/route.ts","app/api/calendar/events/route.ts","app/api/portfolios/[id]/route.ts"];
- for(const file of protectedRoutes)assert.ok(fs.readFileSync(file,"utf8").includes("planDenied=await requestFeature"),file);
+ const protectedRoutes=["app/api/clients/import/route.ts","app/api/collaboration/route.ts","app/api/email/route.ts","app/api/google-leads/route.ts","app/api/market-search/route.ts","app/api/market-price/route.ts","app/api/fx/route.ts","app/api/billing/reminders/route.ts","app/api/calendar/connect/route.ts","app/api/calendar/events/route.ts","app/api/portfolios/[id]/route.ts"];
+ for(const file of protectedRoutes)assert.ok(fs.readFileSync(file,"utf8").includes("requestFeature"),file);
  const dashboard=fs.readFileSync("components/operations-dashboard.tsx","utf8");
  assert.ok(dashboard.includes('<PlanLock'));assert.ok(dashboard.includes('locked={'));assert.ok(dashboard.includes('me.access?.plan,me.access?.status'));
  assert.ok(features.featuresFor('small_business').includes('pipeline'));

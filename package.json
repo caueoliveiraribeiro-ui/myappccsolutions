@@ -6,6 +6,8 @@
     "build": "next build",
     "dev": "next dev",
     "lint": "eslint .",
+    "test": "node scripts/run-regressions.cjs",
+    "typecheck": "tsc --noEmit",
     "start": "next start",
     "credentials": "node scripts/generate-credentials.mjs"
   },

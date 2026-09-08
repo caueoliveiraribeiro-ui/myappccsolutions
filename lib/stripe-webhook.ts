@@ -2,7 +2,7 @@ import { randomBytes } from "node:crypto"
 import Stripe from "stripe"
 import { db } from "@/lib/supabase"
 import { hashUserPassword } from "@/lib/auth"
-import { tokenHash } from "@/lib/registration"
+import { tokenHash } from "@/lib/password-tokens"
 import { sendAccountSetupEmail } from "@/lib/account-setup-email"
 import {
   isSubscriptionPlan,
@@ -11,7 +11,7 @@ import {
 import { getStripe } from "@/lib/stripe"
 
 function stripeId(
-  value: string | Stripe.Customer | Stripe.Subscription | null | undefined,
+  value: string | { id: string } | null | undefined,
   prefix: string
 ) {
   if (!value) return null
@@ -35,7 +35,7 @@ function subscriptionPlan(subscription: Stripe.Subscription) {
 }
 
 function paidUntil(subscription: Stripe.Subscription) {
-  const value = subscription.current_period_end
+  const value = subscription.items.data[0]?.current_period_end
   return value ? new Date(value * 1000).toISOString() : null
 }
 
@@ -150,6 +150,8 @@ async function handleCheckoutCompleted(event: Stripe.Event, session: Stripe.Chec
     }
   }
 
+  if (!userId) throw new Error("ORBIT_USER_NOT_FOUND")
+
   await bindSubscription({ userId, subscriptionId, customerId, plan, observed })
 
   if (created && setupToken) {
@@ -211,7 +213,7 @@ export async function processStripeEvent(event: Stripe.Event) {
 
     case "invoice.paid": {
       const invoice = event.data.object as Stripe.Invoice
-      const subscriptionId = stripeId(invoice.subscription, "sub_")
+      const subscriptionId = stripeId(invoice.parent?.subscription_details?.subscription, "sub_")
       if (!subscriptionId) return { ignored: true }
       const subscription = await subscriptionSnapshot(subscriptionId)
       return handleSubscriptionEvent(event, subscription, true)
@@ -219,7 +221,7 @@ export async function processStripeEvent(event: Stripe.Event) {
 
     case "invoice.payment_failed": {
       const invoice = event.data.object as Stripe.Invoice
-      const subscriptionId = stripeId(invoice.subscription, "sub_")
+      const subscriptionId = stripeId(invoice.parent?.subscription_details?.subscription, "sub_")
       if (!subscriptionId) return { ignored: true }
       const subscription = await subscriptionSnapshot(subscriptionId)
       return handleSubscriptionEvent(event, subscription, false)

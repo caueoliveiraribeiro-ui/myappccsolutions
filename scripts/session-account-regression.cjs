@@ -10,5 +10,10 @@ new Function("require","module","exports",ts.transpileModule(fs.readFileSync("li
  fail=true;assert.equal(await auth.getSession(token),null)
  const before=calls;assert.equal((await auth.getSession(auth.createSession("owner@example.com"))).id,auth.OWNER_ID);assert.equal(calls,before)
  assert.equal(await auth.getSession(token+"tampered"),null)
- console.log("PASS: removed accounts rejected; active and legacy owner sessions preserved; tampering and DB failure rejected")
+ const originalSecret=process.env.SESSION_SECRET,originalMode=process.env.NODE_ENV
+ delete process.env.SESSION_SECRET;process.env.NODE_ENV="production"
+ assert.throws(()=>auth.createSession(email,id),/SESSION_SECRET_MISSING/)
+ if(originalSecret===undefined)delete process.env.SESSION_SECRET;else process.env.SESSION_SECRET=originalSecret
+ if(originalMode===undefined)delete process.env.NODE_ENV;else process.env.NODE_ENV=originalMode
+ console.log("PASS: removed accounts rejected; active and legacy owner sessions preserved; tampering and DB failure rejected; production secret fails closed")
 })().catch(e=>{console.error(e);process.exitCode=1})
