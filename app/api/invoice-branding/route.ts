@@ -22,7 +22,7 @@ export async function POST(request: Request) {
   try {
     const input = await request.json()
     const logo = String(input.logo_data_url || "")
-    if (logo && (!/^data:image\/(png|jpeg|webp);base64,/i.test(logo) || logo.length > 950000)) return NextResponse.json({ error: "Use a JPG, PNG, or WebP logo smaller than 700 KB." }, { status: 400 })
+    if (logo && (!/^data:image\/(png|jpeg|webp);base64,/i.test(logo) || logo.length > 3_700_000)) return NextResponse.json({ error: "Use a JPG, PNG, or WebP logo smaller than 2.5 MB." }, { status: 400 })
     const rows = await db("invoice_branding", { method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=representation" }, body: JSON.stringify({ user_id: user.id, company_name: String(input.company_name || "").trim() || null, logo_data_url: logo || null, updated_at: new Date().toISOString() }) })
     return NextResponse.json({ branding: rows?.[0] || {} })
   } catch { return NextResponse.json({ error: "We could not save your invoice brand." }, { status: 503 }) }
