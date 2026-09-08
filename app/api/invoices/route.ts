@@ -45,6 +45,7 @@ export async function POST(request: Request) {
       client_name,
       client_email: String(input.client_email || "").trim() || null,
       client_company_name: String(input.client_company_name || "").trim() || null,
+      client_address: String(input.client_address || "").trim().slice(0, 1000) || null,
       client_logo_url: /^https:\/\//i.test(String(input.client_logo_url || "").trim()) ? String(input.client_logo_url).trim() : null,
       issuer_company_name: String(branding.company_name || "").trim() || null,
       issuer_logo_data: String(branding.logo_data_url || "").slice(0, 1_300_000) || null,
