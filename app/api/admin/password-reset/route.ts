@@ -64,15 +64,12 @@ export async function POST(request: Request) {
     if (result.code === "not_found") {
       return NextResponse.json({ error: "Orbit account not found." }, { status: 404 })
     }
-    if (result.code === "protected") {
-      return NextResponse.json({ error: "Protected owner accounts cannot be reset from this panel." }, { status: 403 })
-    }
     if (result.code === "not_configured") {
-      return NextResponse.json({ error: "Password-reset email is not configured on the server." }, { status: 503 })
+      return NextResponse.json({ error: "Password-reset email is not configured on the server. Verify RESEND_API_KEY, RESEND_FROM_EMAIL and SESSION_SECRET in Vercel production." }, { status: 503 })
     }
     if (result.code === "email_failed") {
       console.error("ORBIT_ADMIN_PASSWORD_RESET_EMAIL_FAILED:", result.detail || "")
-      return NextResponse.json({ error: "Resend rejected the password-reset email. Check the server logs for details." }, { status: 502 })
+      return NextResponse.json({ error: `Resend rejected the password-reset email${result.detail ? `: ${result.detail}` : "."}` }, { status: 502 })
     }
     if (result.code === "database_failed") {
       console.error("ORBIT_ADMIN_PASSWORD_RESET_DATABASE_FAILED:", result.detail || "")
