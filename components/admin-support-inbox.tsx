@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { AnimatePresence, motion } from "motion/react"
-import { CheckCircle2, Inbox, LifeBuoy, MessageCircleMore, RefreshCw, Send, UserRound } from "lucide-react"
+import { CheckCircle2, Inbox, LifeBuoy, MessageCircleMore, RefreshCw, Send, Trash2, UserRound } from "lucide-react"
 import { orbitEase } from "@/components/motion-ui"
 
 type Conversation = {
@@ -12,7 +12,7 @@ type Conversation = {
   human_requested: boolean
   last_message_at: string
   created_at: string
-  member?: { id: string; name?: string; email?: string } | null
+  member?: { id: string; name?: string; email?: string; created_at?: string; subscription?: { plan?: string; status?: string; access_until?: string } | null } | null
 }
 
 type Message = {
@@ -91,6 +91,26 @@ export function AdminSupportInbox() {
     }
   }
 
+  async function deleteConversation() {
+    if (!selected || busy || !confirm("Delete this conversation and every message in it? This cannot be undone.")) return
+    setBusy(true)
+    setError("")
+    try {
+      const r = await fetch("/api/admin/support", { method: "DELETE", headers: { "content-type": "application/json" }, body: JSON.stringify({ conversationId: selected }) })
+      const d = await r.json().catch(() => ({}))
+      if (!r.ok) throw Error(d.error || "Could not delete this conversation.")
+      const remaining = conversations.filter((item) => item.id !== selected)
+      setConversations(remaining)
+      setSelected(remaining[0]?.id || "")
+      setMessages([])
+      setMember(null)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not delete this conversation.")
+    } finally {
+      setBusy(false)
+    }
+  }
+
   async function updateStatus(next: "open" | "pending" | "resolved") {
     if (!selected || busy) return
     setBusy(true)
@@ -136,7 +156,7 @@ export function AdminSupportInbox() {
             <div className="max-h-[660px] overflow-y-auto p-2">
               {!conversations.length && <div className="grid min-h-52 place-items-center text-center text-sm text-slate-500"><div><Inbox className="mx-auto mb-3"/>No support conversations yet.</div></div>}
               {conversations.map((item)=><button key={item.id} onClick={()=>setSelected(item.id)} className={`mb-2 w-full rounded-2xl border p-3 text-left transition ${selected===item.id?"border-cyan-300/35 bg-cyan-300/[.08]":"border-white/[.06] bg-white/[.025] hover:bg-white/[.05]"}`}>
-                <div className="flex items-start justify-between gap-2"><div className="min-w-0"><p className="truncate text-sm font-semibold text-slate-100">{item.member?.name || item.member?.email || "Orbit member"}</p><p className="mt-0.5 truncate text-xs text-slate-500">{item.subject || "Orbit Support"}</p></div><span className={`rounded-full px-2 py-1 text-[9px] font-semibold uppercase ${item.human_requested?"bg-amber-300/10 text-amber-200":"bg-white/[.05] text-slate-400"}`}>{item.human_requested?"Human":""+item.status}</span></div>
+                <div className="flex items-start justify-between gap-2"><div className="min-w-0"><p className="truncate text-sm font-semibold text-slate-100">{item.member?.name || item.member?.email || "Orbit member"}</p><p className="mt-0.5 truncate text-xs text-slate-500">{item.member?.email || item.subject || "Orbit Support"}</p><p className="mt-1 text-[10px] uppercase tracking-wide text-cyan-200/65">{item.member?.subscription?.plan?.replace(/_/g, " ") || "No active plan"}</p></div><span className={`rounded-full px-2 py-1 text-[9px] font-semibold uppercase ${item.human_requested?"bg-amber-300/10 text-amber-200":"bg-white/[.05] text-slate-400"}`}>{item.human_requested?"Human":""+item.status}</span></div>
                 <p className="mt-3 text-[10px] text-slate-600">{new Date(item.last_message_at).toLocaleString()}</p>
               </button>)}
             </div>
@@ -146,8 +166,10 @@ export function AdminSupportInbox() {
             {!active ? <div className="grid flex-1 place-items-center text-center"><div className="max-w-sm"><MessageCircleMore className="mx-auto text-cyan-300" size={32}/><p className="mt-4 font-semibold">Select a conversation</p><p className="mt-2 text-sm text-slate-500">Customer messages and Orbit responses will appear here.</p></div></div> : <>
               <div className="flex flex-col gap-3 border-b border-white/[.08] p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
                 <div className="flex items-center gap-3"><div className="grid h-11 w-11 place-items-center rounded-2xl bg-cyan-300/10 text-cyan-200"><UserRound size={19}/></div><div><p className="font-semibold">{member?.name || "Orbit member"}</p><p className="text-xs text-slate-500">{member?.email || active.id}</p></div></div>
-                <div className="flex flex-wrap gap-2">{(["open","pending","resolved"] as const).map((item)=><button key={item} disabled={busy} onClick={()=>updateStatus(item)} className={`rounded-xl px-3 py-2 text-xs capitalize ${active.status===item?"bg-cyan-300 text-slate-950":"border border-white/10 bg-white/[.03] text-slate-400"}`}>{item}</button>)}</div>
+                <div className="flex flex-wrap gap-2">{(["open","pending","resolved"] as const).map((item)=><button key={item} disabled={busy} onClick={()=>updateStatus(item)} className={`rounded-xl px-3 py-2 text-xs capitalize ${active.status===item?"bg-cyan-300 text-slate-950":"border border-white/10 bg-white/[.03] text-slate-400"}`}>{item}</button>)}<button disabled={busy} onClick={deleteConversation} title="Delete conversation" className="inline-flex items-center gap-1.5 rounded-xl border border-red-400/25 bg-red-400/[.06] px-3 py-2 text-xs text-red-200 hover:bg-red-400/[.12] disabled:opacity-40"><Trash2 size={14}/>Delete</button></div>
               </div>
+
+              <div className="grid grid-cols-2 gap-2 border-b border-white/[.08] bg-white/[.018] px-4 py-3 text-xs sm:grid-cols-4 sm:px-5"><Info label="Plan" value={member?.subscription?.plan?.replace(/_/g, " ") || "No active plan"}/><Info label="Plan status" value={member?.subscription?.status || "Unassigned"}/><Info label="Joined" value={member?.created_at ? new Date(member.created_at).toLocaleDateString() : "Unknown"}/><Info label="Messages" value={String(messages.length)}/></div>
 
               <div className="flex-1 overflow-y-auto p-4 sm:p-6">
                 <AnimatePresence initial={false}>{messages.map((message)=><motion.div key={message.id} initial={{opacity:0,y:5}} animate={{opacity:1,y:0}} transition={{duration:.25,ease:orbitEase}} className={`mb-3 flex ${message.sender==="user"?"justify-start":"justify-end"}`}><div className={`max-w-[82%] rounded-[20px] px-4 py-3 ${message.sender==="user"?"rounded-bl-md border border-white/[.08] bg-white/[.05] text-slate-200":message.sender==="support_agent"?"rounded-br-md bg-cyan-300 text-slate-950":"rounded-br-md border border-violet-300/15 bg-violet-300/[.08] text-violet-100"}`}><div className="mb-1 text-[9px] font-semibold uppercase tracking-[.15em] opacity-60">{message.sender==="user"?"Customer":message.sender==="support_agent"?"Support":"Orbit"}</div><p className="whitespace-pre-wrap text-sm leading-6">{message.content}</p><p className="mt-2 text-[9px] opacity-45">{new Date(message.created_at).toLocaleString()}</p></div></motion.div>)}</AnimatePresence>
@@ -162,4 +184,9 @@ export function AdminSupportInbox() {
       </div>
     </main>
   )
+}
+
+
+function Info({ label, value }: { label: string; value: string }) {
+  return <div className="rounded-xl border border-white/[.07] bg-black/10 px-3 py-2"><p className="text-[9px] font-semibold uppercase tracking-[.14em] text-slate-500">{label}</p><p className="mt-1 truncate capitalize text-slate-200">{value}</p></div>
 }
