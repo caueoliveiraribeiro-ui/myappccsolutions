@@ -42,6 +42,8 @@ export async function POST(request: Request) {
       project_id: typeof input.project_id === "string" && /^[0-9a-f-]{36}$/i.test(input.project_id) ? input.project_id : null,
       client_name,
       client_email: String(input.client_email || "").trim() || null,
+      client_company_name: String(input.client_company_name || "").trim() || null,
+      client_logo_url: /^https:\/\//i.test(String(input.client_logo_url || "").trim()) ? String(input.client_logo_url).trim() : null,
       invoice_number,
       service_name: String(input.service_name || "").trim() || "Professional services",
       amount,
@@ -62,6 +64,9 @@ export async function POST(request: Request) {
     if (detail.includes("duplicate key") || detail.includes("invoices_user_id_invoice_number_key")) {
       return NextResponse.json({ error: "That invoice number is already in use. Please try creating the invoice again." }, { status: 409 })
     }
-    return NextResponse.json({ error: "We could not save this invoice. Your other records are safe; please try again." }, { status: 503 })
+    const friendly = detail.includes("column") && detail.includes("does not exist")
+      ? "The invoice system is still updating. Refresh once and try again."
+      : "We could not save this invoice. Your other records are safe; please try again."
+    return NextResponse.json({ error: friendly }, { status: 503 })
   }
 }
