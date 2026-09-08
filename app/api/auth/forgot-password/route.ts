@@ -43,15 +43,16 @@ export async function POST(request: Request) {
       if (result.code === "not_found") {
         return NextResponse.json({ error: "Orbit account not found." }, { status: 404 })
       }
-      if (result.code === "protected") {
-        return NextResponse.json({ error: "Protected owner accounts cannot be reset from this panel." }, { status: 403 })
-      }
       if (result.code === "not_configured") {
         return NextResponse.json({ error: "Password-reset email is not configured on the server." }, { status: 503 })
       }
       if (result.code === "email_failed") {
         console.error("ORBIT_ADMIN_PASSWORD_RESET_EMAIL_FAILED:", result.detail || "")
-        return NextResponse.json({ error: "Resend rejected the password-reset email. Check Vercel logs for the delivery error." }, { status: 502 })
+        return NextResponse.json({ error: `Resend rejected the password-reset email${result.detail ? `: ${result.detail}` : "."}` }, { status: 502 })
+      }
+      if (result.code === "database_failed") {
+        console.error("ORBIT_ADMIN_PASSWORD_RESET_DATABASE_FAILED:", result.detail || "")
+        return NextResponse.json({ error: "The password-reset database tables are not available or could not be updated." }, { status: 503 })
       }
       console.error("ORBIT_ADMIN_PASSWORD_RESET_FAILED:", result.code, result.detail || "")
       return NextResponse.json({ error: "Password reset could not be issued." }, { status: 503 })
@@ -65,8 +66,8 @@ export async function POST(request: Request) {
     const result = await issuePasswordReset(email, { publicIp: ip })
 
     // Public password reset intentionally never reveals whether an account
-    // exists, is owner-protected, is rate-limited, or had a delivery failure.
-    if (!result.ok && !["not_found", "protected", "rate_limited"].includes(result.code)) {
+    // exists, is rate-limited, or had a delivery failure.
+    if (!result.ok && !["not_found", "rate_limited"].includes(result.code)) {
       console.error("ORBIT_PASSWORD_RESET_REQUEST_FAILED:", result.code, result.detail || "")
     }
 
