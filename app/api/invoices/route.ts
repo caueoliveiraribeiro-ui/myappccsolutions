@@ -28,10 +28,10 @@ export async function POST(request: Request) {
     }
 
     const issuedToday = new Date().toISOString().slice(0, 10)
-    let invoice_number = requestedNumber || `ORB-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`
+    let invoice_number = requestedNumber || `INV-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`
     const existing = await db(`invoices?user_id=eq.${encodeURIComponent(user.id)}&invoice_number=eq.${encodeURIComponent(invoice_number)}&select=id&limit=1`)
     if (existing?.[0]) {
-      const prefix = `ORB-${new Date().getFullYear()}-`
+      const prefix = `INV-${new Date().getFullYear()}-`
       invoice_number = `${prefix}${Date.now().toString().slice(-6)}`
     }
 
