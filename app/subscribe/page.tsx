@@ -1,14 +1,11 @@
 import { cookies } from "next/headers"
 import { getSession } from "@/lib/auth"
 import { accountAccess } from "@/lib/plan-access"
-import { StripeSubscription } from "@/components/stripe-subscription"
 import { HotmartSubscription } from "@/components/hotmart-subscription"
 import {
   isStripePlan,
-  isSubscriptionPlan,
   stripeOffers,
 } from "@/lib/stripe-plans"
-import { getStripe, stripeBillingReady } from "@/lib/stripe"
 
 export const dynamic = "force-dynamic"
 
@@ -16,30 +13,15 @@ const hotmartCheckouts = {
   personal: "https://pay.hotmart.com/G107468574F?off=fcv6cun6",
   small_business: "https://pay.hotmart.com/G107468574F?off=qks1vkpc",
   big_business: "https://pay.hotmart.com/G107468574F?off=n37sgoia",
+  business_customization: "https://pay.hotmart.com/G107468574F?off=mo50qwjw",
 } as const
 
 const hotmartPrices = {
   personal: "$29.99",
   small_business: "$99.99",
   big_business: "$189.99",
+  business_customization: "US$599.99",
 } as const
-
-function formatStripeAmount(unitAmount: number, currency: string) {
-  const zeroDecimalCurrencies = new Set([
-    "bif","clp","djf","gnf","jpy","kmf","krw","mga","pyg","rwf","ugx","vnd","vuv","xaf","xof","xpf",
-  ])
-  const normalizedCurrency = currency.toLowerCase()
-  const amount = zeroDecimalCurrencies.has(normalizedCurrency)
-    ? unitAmount
-    : unitAmount / 100
-
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: normalizedCurrency.toUpperCase(),
-    minimumFractionDigits: zeroDecimalCurrencies.has(normalizedCurrency) ? 0 : 2,
-    maximumFractionDigits: zeroDecimalCurrencies.has(normalizedCurrency) ? 0 : 2,
-  }).format(amount)
-}
 
 export default async function Subscribe({
   searchParams,
@@ -74,41 +56,14 @@ export default async function Subscribe({
     owner = access.plan === "owner"
   }
 
-  if (isSubscriptionPlan(plan)) {
-    return (
-      <HotmartSubscription
-        name={stripeOffers[plan].name}
-        formattedPrice={hotmartPrices[plan]}
-        checkoutUrl={hotmartCheckouts[plan]}
-        email={user?.email}
-        owner={owner}
-      />
-    )
-  }
-
-  const ready = stripeBillingReady()
-  let formattedPrice: string | undefined
-
-  if (ready) {
-    try {
-      const price = await getStripe().prices.retrieve(stripeOffers[plan].priceId)
-      if (typeof price.unit_amount === "number" && price.currency) {
-        formattedPrice = formatStripeAmount(price.unit_amount, price.currency)
-      }
-    } catch (error) {
-      console.error("Unable to load Stripe price for subscribe page", error)
-    }
-  }
-
   return (
-    <StripeSubscription
-      plan={plan}
+    <HotmartSubscription
       name={stripeOffers[plan].name}
-      formattedPrice={formattedPrice}
-      billingMode="payment"
+      formattedPrice={hotmartPrices[plan]}
+      checkoutUrl={hotmartCheckouts[plan]}
       email={user?.email}
-      ready={ready}
       owner={owner}
+      customization={plan === "business_customization"}
     />
   )
 }
