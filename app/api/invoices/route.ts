@@ -36,6 +36,8 @@ export async function POST(request: Request) {
     }
 
     const currency = String(input.currency || "USD").trim().toUpperCase()
+    const brandingRows = await db(`invoice_branding?user_id=eq.${encodeURIComponent(user.id)}&select=company_name,logo_data_url&limit=1`).catch(() => [])
+    const branding = brandingRows?.[0] || {}
     const row = {
       user_id: user.id,
       client_id: typeof input.client_id === "string" && /^[0-9a-f-]{36}$/i.test(input.client_id) ? input.client_id : null,
@@ -44,6 +46,8 @@ export async function POST(request: Request) {
       client_email: String(input.client_email || "").trim() || null,
       client_company_name: String(input.client_company_name || "").trim() || null,
       client_logo_url: /^https:\/\//i.test(String(input.client_logo_url || "").trim()) ? String(input.client_logo_url).trim() : null,
+      issuer_company_name: String(branding.company_name || "").trim() || null,
+      issuer_logo_data: String(branding.logo_data_url || "").slice(0, 950000) || null,
       invoice_number,
       service_name: String(input.service_name || "").trim() || "Professional services",
       amount,
