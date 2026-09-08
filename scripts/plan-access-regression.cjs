@@ -60,7 +60,7 @@ async function main(){
  const protectedRoutes=["app/api/clients/import/route.ts","app/api/collaboration/route.ts","app/api/email/route.ts","app/api/google-leads/route.ts","app/api/market-search/route.ts","app/api/market-price/route.ts","app/api/fx/route.ts","app/api/billing/reminders/route.ts","app/api/calendar/connect/route.ts","app/api/calendar/events/route.ts","app/api/portfolios/[id]/route.ts"];
  for(const file of protectedRoutes)assert.ok(fs.readFileSync(file,"utf8").includes("requestFeature"),file);
  const dashboard=fs.readFileSync("components/operations-dashboard.tsx","utf8");
- assert.ok(dashboard.includes('<PlanLock'));assert.ok(dashboard.includes('locked={'));assert.ok(dashboard.includes('me.access?.plan,me.access?.status'));
+ assert.ok(dashboard.includes('<PlanLock'));assert.ok(dashboard.includes('locked={'));assert.match(dashboard,/me\.access\?\.plan\s*,\s*me\.access\?\.status/);
  assert.ok(features.featuresFor('small_business').includes('pipeline'));
  assert.ok(!features.featuresFor('small_business').includes('tasks'));
  assert.deepEqual(features.limitsFor('small_business'),{activeLeads:100,archivedLeads:50,clients:50});
