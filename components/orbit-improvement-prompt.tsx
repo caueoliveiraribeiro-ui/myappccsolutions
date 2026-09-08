@@ -8,7 +8,12 @@ export function OrbitImprovementPrompt() {
 
   useEffect(() => {
     if (!window.location.pathname.startsWith("/dashboard")) return
-    const timer = window.setTimeout(() => setOpen(true), 900)
+    const key = "orbit-improvement-prompt-shown"
+    if (window.sessionStorage.getItem(key) === "1") return
+    const timer = window.setTimeout(() => {
+      window.sessionStorage.setItem(key, "1")
+      setOpen(true)
+    }, 900)
     return () => window.clearTimeout(timer)
   }, [])
 
