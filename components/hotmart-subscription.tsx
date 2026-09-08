@@ -10,12 +10,14 @@ export function HotmartSubscription({
   checkoutUrl,
   email,
   owner,
+  customization = false,
 }: {
   name: string
   formattedPrice: string
   checkoutUrl: string
   email?: string
   owner: boolean
+  customization?: boolean
 }) {
   const [busy, setBusy] = useState(false)
 
@@ -52,13 +54,15 @@ export function HotmartSubscription({
           Renews monthly until canceled. Taxes, available payment methods and the final amount are shown securely by Hotmart before payment.
         </p>
 
-        {email && (
+        {customization && <p className="mt-4 text-sm leading-6 text-cyan-100">A separate Orbit workspace tailored to your business. Scope, integrations and support coverage are agreed before purchase.</p>}
+
+        {email && !customization && (
           <p className="my-5 break-all rounded-xl border border-cyan-200/20 p-3 text-sm leading-6">
             To match this purchase automatically to your Orbit account, use the same email at Hotmart checkout: <strong>{email}</strong>.
           </p>
         )}
 
-        {owner ? (
+        {owner && !customization ? (
           <p className="text-cyan-100">Your owner account already has full access. No subscription is needed.</p>
         ) : (
           <Button className="w-full" disabled={busy} onClick={openCheckout}>
