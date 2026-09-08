@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server"
-import { hashUserPassword } from "@/lib/auth"
+import { hashUserPassword, OWNER_ID } from "@/lib/auth"
 import { db } from "@/lib/supabase"
 import { tokenHash } from "@/lib/password-tokens"
 import { APP_ORIGIN } from "@/lib/registration"
-import { ownerAccountIds } from "@/lib/plan-access"
 
 export const runtime = "nodejs"
 
@@ -35,32 +34,51 @@ export async function POST(request: Request) {
     const hashedToken = tokenHash(token)
     const now = new Date().toISOString()
 
-    // Atomically consume exactly one unexpired token from the same table used
-    // by forgot-password, admin resets, and Stripe-created account setup.
-    const consumed = await db(
+    const consumedUser = await db(
       `orbit_password_setup_tokens?token_hash=eq.${encodeURIComponent(hashedToken)}&expires_at=gt.${encodeURIComponent(now)}&select=user_id`,
       { method: "DELETE" }
     )
 
-    const targetUser = consumed?.[0]?.user_id as string | undefined
-    if (!targetUser || ownerAccountIds.has(targetUser)) {
-      return NextResponse.json(
-        { error: "This reset link is invalid, expired, or has already been used." },
-        { status: 400 }
-      )
-    }
-
+    const targetUser = consumedUser?.[0]?.user_id as string | undefined
     const hashed = hashUserPassword(password)
-    const updated = await db(`app_users?id=eq.${encodeURIComponent(targetUser)}&select=id`, {
-      method: "PATCH",
-      body: JSON.stringify({
-        password_salt: hashed.salt,
-        password_hash: hashed.hash,
-      }),
-    })
 
-    if (!updated?.[0]?.id) {
-      throw new Error("ORBIT_PASSWORD_RESET_USER_UPDATE_FAILED")
+    if (targetUser) {
+      const updated = await db(`app_users?id=eq.${encodeURIComponent(targetUser)}&select=id`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          password_salt: hashed.salt,
+          password_hash: hashed.hash,
+          updated_at: new Date().toISOString(),
+        }),
+      })
+
+      if (!updated?.[0]?.id) {
+        throw new Error("ORBIT_PASSWORD_RESET_USER_UPDATE_FAILED")
+      }
+    } else {
+      const consumedOwner = await db(
+        `orbit_owner_password_reset_tokens?token_hash=eq.${encodeURIComponent(hashedToken)}&expires_at=gt.${encodeURIComponent(now)}&select=user_id`,
+        { method: "DELETE" }
+      )
+      const ownerUserId = consumedOwner?.[0]?.user_id as string | undefined
+
+      if (ownerUserId !== OWNER_ID) {
+        return NextResponse.json(
+          { error: "This reset link is invalid, expired, or has already been used." },
+          { status: 400 }
+        )
+      }
+
+      await db("orbit_owner_credentials?on_conflict=user_id", {
+        method: "POST",
+        headers: { Prefer: "resolution=merge-duplicates,return=representation" },
+        body: JSON.stringify({
+          user_id: OWNER_ID,
+          password_salt: hashed.salt,
+          password_hash: hashed.hash,
+          updated_at: new Date().toISOString(),
+        }),
+      })
     }
 
     const response = NextResponse.json({ ok: true })
