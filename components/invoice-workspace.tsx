@@ -25,7 +25,7 @@ export function InvoiceWorkspace({ invoices = [], clients = [], projects = [], c
   const [creating, setCreating] = useState(false)
   const [brand, setBrand] = useState({ company_name: "", logo_data_url: "" })
   const [savingBrand, setSavingBrand] = useState(false)
-  useEffect(() => { fetch("/api/invoice-branding").then(r => r.ok ? r.json() : {}).then(d => d.branding && setBrand({ company_name: d.branding.company_name || "", logo_data_url: d.branding.logo_data_url || "" })).catch(() => {}) }, [])
+  useEffect(() => { fetch("/api/invoice-branding").then(r => r.ok ? r.json() : {}).then((d: any) => d.branding && setBrand({ company_name: d.branding.company_name || "", logo_data_url: d.branding.logo_data_url || "" })).catch(() => {}) }, [])
   const nextNumber = useMemo(() => `ORB-${new Date().getFullYear()}-${String(invoices.length + 1).padStart(4, "0")}`, [invoices.length])
   const client = clients.find((item: Row) => item.id === selectedClient)
 
