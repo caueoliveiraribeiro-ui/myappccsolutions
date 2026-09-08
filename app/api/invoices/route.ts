@@ -47,7 +47,7 @@ export async function POST(request: Request) {
       client_company_name: String(input.client_company_name || "").trim() || null,
       client_logo_url: /^https:\/\//i.test(String(input.client_logo_url || "").trim()) ? String(input.client_logo_url).trim() : null,
       issuer_company_name: String(branding.company_name || "").trim() || null,
-      issuer_logo_data: String(branding.logo_data_url || "").slice(0, 950000) || null,
+      issuer_logo_data: String(branding.logo_data_url || "").slice(0, 3_700_000) || null,
       invoice_number,
       service_name: String(input.service_name || "").trim() || "Professional services",
       amount,
