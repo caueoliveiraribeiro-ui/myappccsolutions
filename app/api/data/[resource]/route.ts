@@ -11,7 +11,7 @@ import {
 const allowed=new Set(["leads","tasks","assets","projects","activities","clients","expenses","grocery_items","portfolios","holdings","payment_records","food_entries","savings_goals","invoices"])
 type U={id:string;email:string}
 type Context={params:Promise<{resource:string}>}
-function cleanFields(input:Record<string,unknown>){const out={...input};const dates=new Set(["due_date","deadline","payment_date","received_at","charge_date","last_call_date","next_follow_up_date","next_follow_up","expense_date","purchased_at","start_time","consumed_at","target_date","issue_date","sent_at"]);const numbers=new Set(["amount","budget","cost","estimated_value","service_amount","lifetime_value","quantity","estimated_cost","actual_cost","buy_price","current_price","grams","calories","target_amount","current_amount"]);for(const [key,value] of Object.entries(out)){if(value===""&&dates.has(key))out[key]=null;if(numbers.has(key)&&value==="")out[key]=0;if((key==="currency"||key==="quote_currency")&&typeof value==="string")out[key]=value.trim().toUpperCase()}return out}
+function cleanFields(input:Record<string,unknown>){const out={...input};const dates=new Set(["due_date","deadline","payment_date","received_at","charge_date","last_call_date","next_follow_up_date","next_follow_up","expense_date","purchased_at","start_time","consumed_at","target_date","issue_date","sent_at"]);const nullableLinks=new Set(["client_id","project_id","portfolio_id","lead_id","source_lead_id","source_client_id","billing_client_id","source_project_id"]);const numbers=new Set(["amount","budget","cost","estimated_value","service_amount","lifetime_value","quantity","estimated_cost","actual_cost","buy_price","current_price","grams","calories","target_amount","current_amount"]);for(const [key,value] of Object.entries(out)){if(value===""&&(dates.has(key)||nullableLinks.has(key)))out[key]=null;if(numbers.has(key)&&value==="")out[key]=0;if((key==="currency"||key==="quote_currency")&&typeof value==="string")out[key]=value.trim().toUpperCase()}return out}
 
 async function auth(){const token=(await cookies()).get("orbit_session")?.value;return token?await getSession(token) as U|null:null}
 async function owners(u:U){const memberships=await db(`workspace_members?member_user_id=eq.${u.id}&select=owner_user_id,permission`).catch(()=>[]);return [{owner_user_id:u.id,permission:"editor"},...memberships]}
@@ -24,7 +24,7 @@ async function target(resource:string,id:unknown,u:U){
  return row&&memberships.some((m:any)=>m.owner_user_id===row.user_id&&m.permission==="editor")?row:null
 }
 async function validLinks(resource:string,row:Record<string,any>,changed?:Record<string,any>){
- const links:Record<string,string>={portfolio_id:"portfolios",lead_id:"leads",source_lead_id:"leads",source_client_id:"clients",billing_client_id:"clients",source_project_id:"projects"}
+ const links:Record<string,string>={portfolio_id:"portfolios",lead_id:"leads",source_lead_id:"leads",source_client_id:"clients",billing_client_id:"clients",source_project_id:"projects",client_id:"clients",project_id:"projects"}
  for(const [key,table] of Object.entries(links)){
   if(!row[key]||(changed&&!Object.prototype.hasOwnProperty.call(changed,key)))continue
   const rows=await db(`${table}?id=eq.${encodeURIComponent(String(row[key]))}&user_id=eq.${row.user_id}&select=*&limit=1`)

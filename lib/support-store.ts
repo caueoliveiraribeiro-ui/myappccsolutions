@@ -4,14 +4,23 @@ export type SupportSender = "user" | "orbit_ai" | "support_agent" | "system"
 
 export async function getOpenConversation(userId: string) {
   const rows = await db(
-    `support_conversations?user_id=eq.${encodeURIComponent(userId)}&status=in.(open,pending)&select=id,user_id,status,subject,human_requested,ai_enabled,last_message_at,created_at,updated_at&order=last_message_at.desc&limit=1`,
+    `support_conversations?user_id=eq.${encodeURIComponent(userId)}&select=id,user_id,status,subject,human_requested,ai_enabled,last_message_at,created_at,updated_at&order=last_message_at.desc&limit=1`,
   )
   return rows?.[0] || null
 }
 
 export async function getOrCreateOpenConversation(userId: string, subject = "Orbit Support") {
   const existing = await getOpenConversation(userId)
-  if (existing) return existing
+  if (existing) {
+    if (existing.status === "resolved") {
+      const reopened = await db(`support_conversations?id=eq.${encodeURIComponent(existing.id)}`, {
+        method: "PATCH",
+        body: JSON.stringify({ status: "open", human_requested: false, updated_at: new Date().toISOString() }),
+      })
+      return reopened?.[0] || { ...existing, status: "open" }
+    }
+    return existing
+  }
 
   const created = await db("support_conversations", {
     method: "POST",
@@ -54,3 +63,4 @@ export async function listConversationMessages(conversationId: string) {
     )) || []
   )
 }
+

@@ -23,9 +23,10 @@ const normalize = (value: string) => value.trim().toLowerCase()
  */
 export async function answerOrbitSupport(
   message: string,
-  _context: OrbitSupportContext = {},
+  context: OrbitSupportContext = {},
 ): Promise<OrbitSupportResult> {
   const text = normalize(message)
+  const pageHint = context.page ? ` Since you are on ${context.page}, ` : " "
 
   if (/human|person|agent|representative|talk to support|speak to support/.test(text)) {
     return {
@@ -41,7 +42,7 @@ export async function answerOrbitSupport(
     return {
       mode: "knowledge",
       reply:
-        "I can help with plans, subscription access and billing questions. Orbit keeps plan access tied to the account that purchased it. You can review available plans on the Plans page, and account or subscription controls are available from Settings. If you’re troubleshooting a charge, tell me what you see without sharing card numbers or banking details.",
+        `Absolutely — I can help with plans and billing.${pageHint}Orbit keeps access tied to the account that purchased the plan. You can compare plans on the Plans page and manage an active subscription from Invite & Sharing. If a payment looks wrong, tell me what you see, but never send card or banking details.`,
       suggestions: ["Why is a feature locked?", "Where are my account settings?"],
     }
   }
@@ -139,7 +140,7 @@ export async function answerOrbitSupport(
       mode: "knowledge",
       needsHuman: true,
       reply:
-        "I can help troubleshoot it. Tell me which Orbit screen you were using, what you expected to happen, what actually happened, and the exact error message if one appeared. Please don’t include passwords, API keys, payment-card details or private tokens.",
+        `I’m sorry that happened.${pageHint}Tell me what you clicked, what you expected, and what Orbit did instead. A screenshot or the exact error text is perfect. Please leave out passwords, API keys, payment-card details and private tokens.`,
       suggestions: ["Account help", "Calendar help"],
     }
   }

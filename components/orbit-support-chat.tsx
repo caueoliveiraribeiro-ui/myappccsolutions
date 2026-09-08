@@ -179,7 +179,7 @@ export function OrbitSupportChat() {
       const response = await fetch("/api/support/chat", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ message, context: { plan: me.access?.plan, features: me.access?.features } }),
+        body: JSON.stringify({ message, context: { page: window.location.pathname, plan: me.access?.plan, features: me.access?.features } }),
       })
       const data = await response.json().catch(() => ({}))
       if (!response.ok) throw new Error(data.error || "Orbit Support is temporarily unavailable.")
