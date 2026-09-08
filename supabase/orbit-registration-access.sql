@@ -1,4 +1,4 @@
--- Orbit only. Manual entitlements until verified Paddle webhooks are installed.
+-- Orbit only. Manual entitlements until verified billing webhooks are installed.
 -- Does not open registration or modify/delete existing business data.
 BEGIN;
 CREATE TABLE IF NOT EXISTS public.account_subscriptions(
@@ -116,3 +116,4 @@ REVOKE ALL ON FUNCTION public.orbit_assign_plan(uuid,uuid,text,text,timestamptz)
 GRANT EXECUTE ON FUNCTION public.orbit_assign_plan(uuid,uuid,text,text,timestamptz) TO service_role;
 NOTIFY pgrst,'reload schema';
 COMMIT;
+

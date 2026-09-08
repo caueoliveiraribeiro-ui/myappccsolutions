@@ -1,5 +1,5 @@
 -- Orbit LM Hotmart billing support.
--- Additive migration. Keeps existing Stripe/Paddle data intact.
+-- Additive migration. Keeps existing billing data intact.
 
 BEGIN;
 
@@ -38,3 +38,4 @@ TO service_role;
 NOTIFY pgrst,'reload schema';
 
 COMMIT;
+

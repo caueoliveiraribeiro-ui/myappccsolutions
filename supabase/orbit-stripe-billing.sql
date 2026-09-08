@@ -1,5 +1,5 @@
 -- Orbit LM Stripe billing.
--- Additive migration. Does not delete Paddle billing data.
+-- Additive migration. Does not delete existing billing data.
 
 BEGIN;
 
@@ -477,3 +477,4 @@ GRANT EXECUTE ON FUNCTION
 TO service_role;
 
 NOTIFY pgrst,'reload schema';
+

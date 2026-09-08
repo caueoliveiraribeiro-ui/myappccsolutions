@@ -166,15 +166,14 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: "Type the user's exact email address to confirm deletion." }, { status: 400 })
     }
 
-    const [accountRows, stripeRows, paddleRows, hotmartRows] = await Promise.all([
+    const [accountRows, stripeRows, hotmartRows] = await Promise.all([
       optionalRows(`account_subscriptions?user_id=eq.${encodeURIComponent(userId)}&select=status,plan`),
       optionalRows(`orbit_stripe_subscriptions?user_id=eq.${encodeURIComponent(userId)}&select=status,subscription_id`),
-      optionalRows(`orbit_paddle_subscriptions?user_id=eq.${encodeURIComponent(userId)}&select=status,subscription_id`),
       optionalRows(`orbit_hotmart_subscriptions?user_id=eq.${encodeURIComponent(userId)}&select=status,subscriber_code`),
     ])
 
     const accountBlocks = accountRows.some((row: any) => ["active", "past_due"].includes(String(row.status || "").toLowerCase()))
-    const providerBlocks = [...stripeRows, ...paddleRows, ...hotmartRows].some((row: any) => {
+    const providerBlocks = [...stripeRows, ...hotmartRows].some((row: any) => {
       const state = String(row.status || "").toLowerCase()
       return state && !["canceled", "cancelled", "inactive", "incomplete_expired", "expired", "refunded"].includes(state)
     })
@@ -218,8 +217,6 @@ export async function DELETE(request: Request) {
     await optionalDelete(`calendar_connections?user_id=eq.${id}`)
     await optionalDelete(`user_profiles?user_id=eq.${id}`)
     await optionalDelete(`orbit_password_setup_tokens?user_id=eq.${id}`)
-    await optionalDelete(`orbit_paddle_checkouts?user_id=eq.${id}`)
-    await optionalDelete(`orbit_paddle_subscriptions?user_id=eq.${id}`)
     await optionalDelete(`orbit_stripe_subscriptions?user_id=eq.${id}`)
     await optionalDelete(`orbit_hotmart_subscriptions?user_id=eq.${id}`)
     await optionalDelete(`account_subscriptions?user_id=eq.${id}`)
@@ -235,3 +232,4 @@ export async function DELETE(request: Request) {
     )
   }
 }
+

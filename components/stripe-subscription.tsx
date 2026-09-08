@@ -94,10 +94,11 @@ export function StripeSubscription({
 
         <div className="mt-7 flex flex-wrap gap-5 text-sm">
           <a className="text-cyan-200 underline" href="/dashboard">Open dashboard</a>
-          <a className="text-slate-300 underline" href="https://orbit-landing-page-rose.vercel.app/#plans">Compare plans</a>
+          <a className="text-slate-300 underline" href="/plans">Compare plans</a>
           <a className="text-slate-300 underline" href="/billing">Manage billing</a>
         </div>
       </Card>
     </main>
   )
 }
+
