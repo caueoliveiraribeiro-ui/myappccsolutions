@@ -285,7 +285,7 @@ export function CrmEmailActions() {
       if (!response.ok) throw new Error(data.error || `Could not archive this ${singular}.`)
 
       toast.success(`${singular === "client" ? "Client" : "Project"} archived.`)
-      window.setTimeout(() => window.location.reload(), 120)
+      window.dispatchEvent(new CustomEvent("orbit:records-changed", {detail:{resource}}))
     } catch (error) {
       toast.error(error instanceof Error ? error.message : `Could not archive this ${singular}.`)
     } finally {
@@ -345,11 +345,6 @@ export function CrmEmailActions() {
         target.id,
       ))}
 
-      {projectArchiveSlot && createPortal(
-        <ArchiveManagerButton resource="projects" label="Archive" className="h-8 border-cyan-300/25 bg-[#0b1524]/95 px-2 text-[11px] text-cyan-100" />,
-        projectArchiveSlot,
-        "project-archive-menu",
-      )}
 
       {composer && (
         <div className="fixed inset-0 z-[80] grid place-items-center bg-black/70 p-4">

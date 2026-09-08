@@ -43,6 +43,9 @@ export function ArchiveManagerButton({
 
   useEffect(() => {
     void refresh(false)
+    const changed = () => void refresh(false)
+    window.addEventListener("orbit:records-changed", changed)
+    return () => window.removeEventListener("orbit:records-changed", changed)
   }, [resource])
 
   async function restore(row: Row) {
@@ -59,7 +62,8 @@ export function ArchiveManagerButton({
       if (!response.ok) throw new Error(data.error || "We could not restore this record.")
       setItems((current) => current.filter((item) => item.id !== row.id))
       toast.success(`${singular === "client" ? "Client" : "Project"} restored.`)
-      window.setTimeout(() => window.location.reload(), 120)
+      window.dispatchEvent(new CustomEvent("orbit:records-changed", {detail:{resource}}))
+      setLoading(false)
     } catch (err) {
       setError(err instanceof Error ? err.message : "We could not restore this record.")
       setLoading(false)
@@ -117,6 +121,7 @@ export function ArchiveManagerButton({
   return (
     <>
       <Button
+        data-orbit-archive-resource={resource}
         type="button"
         size="sm"
         variant="outline"

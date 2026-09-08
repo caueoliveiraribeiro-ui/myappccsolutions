@@ -38,7 +38,7 @@ export function OrbitArchiveControls() {
     toast.success(archived ? `${resource === "clients" ? "Client" : "Project"} archived.` : `${resource === "clients" ? "Client" : "Project"} restored.`)
     await refresh()
     scheduleScan(40)
-    if (!archived) window.location.reload()
+    window.dispatchEvent(new CustomEvent("orbit:records-changed", {detail:{resource}}))
   }
 
   function clientFor(form: HTMLFormElement) {
@@ -109,7 +109,8 @@ export function OrbitArchiveControls() {
 
     if (onClients && clientSearch) {
       const controls = clientSearch.closest("div.relative")?.parentElement
-      if (controls && !controls.querySelector("[data-orbit-client-archive-trigger]")) {
+      if (controls?.querySelector('[data-orbit-archive-resource="clients"]')) controls.querySelector("[data-orbit-client-archive-trigger]")?.remove()
+      if (controls && !controls.querySelector('[data-orbit-archive-resource="clients"]') && !controls.querySelector("[data-orbit-client-archive-trigger]")) {
         const trigger = document.createElement("button")
         trigger.type = "button"
         trigger.dataset.orbitClientArchiveTrigger = "true"
@@ -150,7 +151,8 @@ export function OrbitArchiveControls() {
       })
 
       const existingProjectHeader = document.querySelector("[data-orbit-project-archive-header]")
-      if (!existingProjectHeader) {
+      if (document.querySelector('[data-orbit-archive-resource="projects"]')) existingProjectHeader?.remove()
+      if (!existingProjectHeader && !document.querySelector('[data-orbit-archive-resource="projects"]')) {
         const pageTitle = Array.from(document.querySelectorAll("h1")).find((el) => (el.textContent || "").trim() === "Projects")
         const header = pageTitle?.closest("header")
         if (header) {
