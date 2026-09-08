@@ -26,7 +26,7 @@ export function InvoiceWorkspace({ invoices = [], clients = [], projects = [], c
   const [brand, setBrand] = useState({ company_name: "", logo_data_url: "" })
   const [savingBrand, setSavingBrand] = useState(false)
   useEffect(() => { fetch("/api/invoice-branding").then(r => r.ok ? r.json() : {}).then((d: any) => d.branding && setBrand({ company_name: d.branding.company_name || "", logo_data_url: d.branding.logo_data_url || "" })).catch(() => {}) }, [])
-  const nextNumber = useMemo(() => `ORB-${new Date().getFullYear()}-${String(invoices.length + 1).padStart(4, "0")}`, [invoices.length])
+  const nextNumber = useMemo(() => `INV-${new Date().getFullYear()}-${String(invoices.length + 1).padStart(4, "0")}`, [invoices.length])
   const client = clients.find((item: Row) => item.id === selectedClient)
 
   async function createInvoice(event: FormEvent<HTMLFormElement>) {
@@ -135,7 +135,6 @@ export function InvoiceWorkspace({ invoices = [], clients = [], projects = [], c
           <label className="text-xs font-medium text-slate-300">Invoice status
             <select name="status" defaultValue="draft" className="mt-1.5 h-11 w-full rounded-xl border border-white/10 bg-[#07111f] px-3 text-sm text-white"><option value="draft">Draft</option><option value="sent">Sent</option><option value="paid">Paid</option></select>
           </label>
-          <label className="text-xs font-medium text-slate-300 md:col-span-2">Message or payment notes<Textarea name="notes" className="mt-1.5 min-h-24" placeholder="Thank you for your business. Add payment instructions or a personal note."/></label>
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-cyan-300/15 bg-cyan-300/[.05] p-4 text-sm text-slate-300 md:col-span-2"><span className="flex items-center gap-2"><CheckCircle2 size={17} className="text-cyan-200"/>A branded PDF is generated only after the invoice is saved.</span><Button disabled={creating} className="min-w-44 bg-cyan-300 text-slate-950 hover:bg-cyan-200">{creating ? "Saving invoice…" : "Create invoice"}</Button></div>
         </form>
       </details>
