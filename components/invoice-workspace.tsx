@@ -69,7 +69,27 @@ export function InvoiceWorkspace({ invoices = [], clients = [], projects = [], c
     if (!file) return
     if (!["image/jpeg", "image/png", "image/webp"].includes(file.type) || file.size > 2_500_000) { toast.error("Choose a JPG, PNG, or WebP logo smaller than 2.5 MB."); event.target.value = ""; return }
     const reader = new FileReader()
-    reader.onload = () => setBrand(current => ({ ...current, logo_data_url: String(reader.result || "") }))
+    reader.onload = () => {
+      const image = new Image()
+      image.onload = () => {
+        const largestSide = Math.max(image.width, image.height)
+        const scale = largestSide > 1200 ? 1200 / largestSide : 1
+        const canvas = document.createElement("canvas")
+        canvas.width = Math.max(1, Math.round(image.width * scale))
+        canvas.height = Math.max(1, Math.round(image.height * scale))
+        const context = canvas.getContext("2d")
+        if (!context) { toast.error("We could not prepare this logo. Please choose another image."); return }
+        context.fillStyle = "#ffffff"
+        context.fillRect(0, 0, canvas.width, canvas.height)
+        context.drawImage(image, 0, 0, canvas.width, canvas.height)
+        let optimized = canvas.toDataURL("image/jpeg", 0.86)
+        if (optimized.length > 1_150_000) optimized = canvas.toDataURL("image/jpeg", 0.68)
+        if (optimized.length > 1_250_000) { toast.error("This logo is still too detailed after optimization. Try a simpler image."); return }
+        setBrand(current => ({ ...current, logo_data_url: optimized }))
+      }
+      image.onerror = () => toast.error("We could not read that image. Please choose a JPG, PNG, or WebP logo.")
+      image.src = String(reader.result || "")
+    }
     reader.readAsDataURL(file)
   }
 
@@ -121,7 +141,7 @@ export function InvoiceWorkspace({ invoices = [], clients = [], projects = [], c
       </details>
     </Card>
 
-    <Card className="border-cyan-300/20 bg-white/[.035] p-5 text-white sm:p-6"><div className="flex flex-wrap items-end justify-between gap-4"><div><h2 className="font-semibold">Your invoice brand</h2><p className="mt-1 text-sm text-slate-400">This logo is used on every invoice you create and every scheduled draft.</p></div>{brand.logo_data_url ? <img src={brand.logo_data_url} alt="Invoice logo preview" className="h-12 max-w-32 rounded-xl border border-cyan-300/25 bg-white object-contain p-1"/> : <span className="grid h-12 w-12 place-items-center rounded-xl border border-dashed border-cyan-300/25 text-cyan-200"><FileText size={19}/></span>}</div><div className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto_auto]"><Input value={brand.company_name} onChange={e=>setBrand(current=>({...current,company_name:e.target.value}))} placeholder="Your company name" className="h-11"/><label className="inline-flex h-11 cursor-pointer items-center justify-center rounded-xl border border-cyan-300/30 bg-cyan-300/10 px-4 text-sm font-medium text-cyan-100 transition hover:bg-cyan-300/20">Choose logo<input type="file" accept="image/png,image/jpeg,image/webp" onChange={pickLogo} className="sr-only"/></label><Button type="button" disabled={savingBrand} onClick={saveBrand} className="bg-cyan-300 text-slate-950">{savingBrand?"Saving…":"Save brand"}</Button></div></Card>
+    <Card className="border-cyan-300/20 bg-white/[.035] p-5 text-white sm:p-6"><div className="flex flex-wrap items-end justify-between gap-4"><div><h2 className="font-semibold">Your invoice brand</h2><p className="mt-1 text-sm text-slate-400">This logo is used on every invoice you create and every scheduled draft.</p></div>{brand.logo_data_url ? <img src={brand.logo_data_url} alt="Invoice logo preview" className="h-12 max-w-32 rounded-xl border border-cyan-300/25 bg-white object-contain p-1"/> : <span className="grid h-12 w-12 place-items-center rounded-xl border border-dashed border-cyan-300/25 text-cyan-200"><FileText size={19}/></span>}</div><div className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto_auto]"><Input value={brand.company_name} onChange={e=>setBrand(current=>({...current,company_name:e.target.value}))} placeholder="Your company name" className="h-11"/><label className="inline-flex h-11 cursor-pointer items-center justify-center rounded-xl border border-cyan-300/30 bg-cyan-300/10 px-4 text-sm font-medium text-cyan-100 transition hover:bg-cyan-300/20">Choose logo<input type="file" accept="image/png,image/jpeg,image/webp" onChange={pickLogo} className="sr-only"/></label><p className="text-xs text-slate-500 sm:col-span-2">JPG, PNG, or WebP up to 2.5 MB. It is optimized securely before saving.</p><Button type="button" disabled={savingBrand} onClick={saveBrand} className="bg-cyan-300 text-slate-950">{savingBrand?"Saving…":"Save brand"}</Button></div></Card>
 
     <Card className="border-white/10 bg-white/[.035] p-5 text-white sm:p-6"><div className="mb-5 flex flex-wrap items-end justify-between gap-3"><div><h2 className="font-semibold">Invoice workspace</h2><p className="mt-1 text-sm text-slate-400">Every saved invoice stays editable, downloadable, and ready to send.</p></div><span className="rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-1 text-xs text-cyan-100">{invoices.length} saved</span></div>
       <div className="space-y-3">{invoices.length === 0 && <div className="rounded-2xl border border-dashed border-cyan-300/20 bg-cyan-300/[.035] p-8 text-center text-sm text-slate-400">Your first branded invoice will appear here after you create it.</div>}
