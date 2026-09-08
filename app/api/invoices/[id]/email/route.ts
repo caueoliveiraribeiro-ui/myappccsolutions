@@ -10,7 +10,7 @@ export async function POST(_: Request, { params }: { params: Promise<{ id: strin
   const user = token ? await getSession(token) : null
   if (!user) return NextResponse.json({ error: "Please sign in again." }, { status: 401 })
   const access = await accountAccess(user.id)
-  if (!access.features.includes("reports")) return upgradeResponse()
+  if (!access.features.includes("invoices")) return upgradeResponse()
   if (!process.env.RESEND_API_KEY || !process.env.RESEND_FROM_EMAIL) return NextResponse.json({ error: "Invoice email is not configured. Add RESEND_API_KEY and RESEND_FROM_EMAIL in Vercel." }, { status: 503 })
 
   try {
