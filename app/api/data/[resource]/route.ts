@@ -11,7 +11,7 @@ import {
 const allowed=new Set(["leads","tasks","assets","projects","activities","clients","expenses","grocery_items","portfolios","holdings","payment_records","food_entries","savings_goals","invoices"])
 type U={id:string;email:string}
 type Context={params:Promise<{resource:string}>}
-function cleanFields(input:Record<string,unknown>){const out={...input};const dates=new Set(["due_date","deadline","payment_date","received_at","charge_date","last_call_date","next_follow_up_date","next_follow_up","expense_date","purchased_at","start_time","consumed_at","target_date","issue_date","sent_at"]);const nullableLinks=new Set(["client_id","project_id","portfolio_id","lead_id","source_lead_id","source_client_id","billing_client_id","source_project_id"]);const numbers=new Set(["amount","budget","cost","estimated_value","service_amount","lifetime_value","quantity","estimated_cost","actual_cost","buy_price","current_price","grams","calories","target_amount","current_amount"]);for(const [key,value] of Object.entries(out)){if(value===""&&(dates.has(key)||nullableLinks.has(key)))out[key]=null;if(numbers.has(key)&&value==="")out[key]=0;if((key==="currency"||key==="quote_currency")&&typeof value==="string")out[key]=value.trim().toUpperCase()}return out}
+function cleanFields(input:Record<string,unknown>){const out={...input};delete out.deleted_at;delete out.delete_after;const dates=new Set(["due_date","deadline","payment_date","received_at","charge_date","last_call_date","next_follow_up_date","next_follow_up","expense_date","purchased_at","start_time","consumed_at","target_date","issue_date","sent_at"]);const nullableLinks=new Set(["client_id","project_id","portfolio_id","lead_id","source_lead_id","source_client_id","billing_client_id","source_project_id"]);const numbers=new Set(["amount","budget","cost","estimated_value","service_amount","lifetime_value","quantity","estimated_cost","actual_cost","buy_price","current_price","grams","calories","target_amount","current_amount"]);for(const [key,value] of Object.entries(out)){if(value===""&&(dates.has(key)||nullableLinks.has(key)))out[key]=null;if(numbers.has(key)&&value==="")out[key]=0;if((key==="currency"||key==="quote_currency")&&typeof value==="string")out[key]=value.trim().toUpperCase()}return out}
 
 async function auth(){const token=(await cookies()).get("orbit_session")?.value;return token?await getSession(token) as U|null:null}
 async function owners(u:U){const memberships=await db(`workspace_members?member_user_id=eq.${u.id}&select=owner_user_id,permission`).catch(()=>[]);return [{owner_user_id:u.id,permission:"editor"},...memberships]}
@@ -185,6 +185,12 @@ export async function DELETE(request:Request,{params}:Context){
   const {id}=await request.json(),row=await target(resource,id,u)
   if(!row)return NextResponse.json({error:"You cannot delete this record."},{status:403})
   if(!await permitted(u.id,resource,row)||!await permitted(row.user_id,resource,row))return upgradeResponse()
+  if (["leads","clients","projects"].includes(resource)) {
+    const items = await db(`${resource}?id=eq.${encodeURIComponent(id)}&user_id=eq.${row.user_id}`, {
+      method:"PATCH", body:JSON.stringify({archived:true,deleted_at:row.deleted_at || new Date().toISOString()})
+    })
+    return NextResponse.json({ok:true,archived:true,items})
+  }
 if (resource === "tasks" && row.google_calendar_event_id) {
   try {
     await deleteCrmCalendarEvent({

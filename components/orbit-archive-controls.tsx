@@ -37,6 +37,7 @@ export function OrbitArchiveControls() {
     toast.success(archived ? `${resource === "clients" ? "Client" : "Project"} archived.` : `${resource === "clients" ? "Client" : "Project"} restored.`)
     await refresh()
     scheduleScan(40)
+    if (!archived) window.location.reload()
   }
 
   function clientFor(form: HTMLFormElement) {
@@ -228,7 +229,7 @@ export function OrbitArchiveControls() {
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-[.18em] text-cyan-200">Reserved archive</p>
             <h2 className="mt-1 text-xl font-semibold">Archived {view}</h2>
-            <p className="mt-1 text-xs text-slate-500">{archived.length}/50 stored. Archived records are hidden from the active directory but remain safe.</p>
+            <p className="mt-1 text-xs text-slate-500">{archived.length}/50 stored. Deleted records can be restored for three months. Ordinary archives have no expiry.</p>
           </div>
           <button type="button" onClick={() => setView(null)} className="grid h-10 w-10 place-items-center rounded-xl border border-white/10 hover:bg-white/10" aria-label="Close archive"><X size={18} /></button>
         </div>
@@ -237,7 +238,7 @@ export function OrbitArchiveControls() {
           {archived.map((row) => (
             <div key={row.id} className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-black/20 p-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="min-w-0">
-                <b className="block truncate text-sm">{row.name || "Untitled"}</b>
+                <b className="block truncate text-sm">{row.name || "Untitled"}</b>{row.delete_after && <p className="mt-1 text-xs text-amber-200">Recover before {new Date(row.delete_after).toLocaleDateString()}</p>}
                 <p className="truncate text-xs text-slate-500">{view === "clients" ? [row.company_name, row.email, row.service].filter(Boolean).join(" · ") : [row.client, row.kind, row.stage].filter(Boolean).join(" · ")}</p>
               </div>
               <button type="button" onClick={() => setArchived(view, row, false)} className={buttonClass}><RotateCcw size={14} className="mr-2" /> Restore</button>

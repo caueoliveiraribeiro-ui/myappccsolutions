@@ -28,7 +28,7 @@ async function main(){
  const source=fs.readFileSync("components/operations-dashboard.tsx","utf8");assert.ok(source.includes("Orbit LM"));assert.ok(!source.includes("I Wanna Be a Millionaire"));assert.equal((source.match(/<BillingReminders/g)||[]).length,1);
  const reports=source.slice(source.indexOf('function Reports('));assert.ok(reports.includes('value={money(monthlyReceivedTotal)}'));assert.match(reports,/annualIncome\s*=\s*yearlyReceivedTotal\(payments,\s*convert,\s*month\)/);assert.ok(reports.indexOf('title="Annual income"')>reports.indexOf('title="Payments received"'));assert.ok(reports.indexOf('title="Annual income"')<reports.indexOf('title="Net tracked"'));assert.match(reports,/\)\s*\+\s*receivedTotal\)/); // Net tracked remains all-time
  for(const name of ["Add client","Add lead","Create project"])assert.match(source,new RegExp('collapsible\\s+label="'+name+'"'));
- assert.match(source,/directory_hidden\s*:\s*true/);assert.match(source,/addPayment=\{\(x:\s*R\)\s*=>\s*add\("payment_records",\s*x\)\}/);
+ assert.match(source,/del\("leads",\s*id\)/);assert.match(source,/addPayment=\{\(x:\s*R\)\s*=>\s*add\("payment_records",\s*x\)\}/);
  const sql=fs.readFileSync("supabase/orbit-payments-import-update.sql","utf8");assert.ok(sql.includes("::date+10"));assert.ok(sql.includes("pg_trigger_depth()>1"));assert.ok(sql.includes("FROM public,anon,authenticated"));assert.ok(sql.includes("pg_advisory_xact_lock"));assert.ok(sql.includes("on conflict(user_id,client_id,due_date) do nothing"));
  console.log("PASS: Orbit payment statuses, month/year totals, CSV import, owner isolation, provider caching, dropdowns and migration guards.");
 }

@@ -73,7 +73,7 @@ export function ArchiveManagerButton({
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-[.18em] text-cyan-200">Reserved archive</p>
                 <h2 className="mt-1 text-xl font-semibold">{title}</h2>
-                <p className="mt-1 text-xs text-slate-500">{items.length}/50 stored. Archived records stay safe and are removed from the active list.</p>
+                <p className="mt-1 text-xs text-slate-500">{items.length}/50 stored. Deleted records can be restored for three months. Ordinary archives have no expiry.</p>
               </div>
               <button type="button" onClick={() => setOpen(false)} className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-white/10 text-slate-300 hover:bg-white/10" aria-label="Close archive">
                 <X size={18} />
@@ -87,7 +87,7 @@ export function ArchiveManagerButton({
               {items.map((row) => (
                 <div key={row.id} className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-black/20 p-4 sm:flex-row sm:items-center sm:justify-between">
                   <div className="min-w-0">
-                    <b className="block truncate text-sm">{row.name || "Untitled"}</b>
+                    <b className="block truncate text-sm">{row.name || "Untitled"}</b>{row.delete_after && <p className="mt-1 text-xs text-amber-200">Recover before {new Date(row.delete_after).toLocaleDateString()}</p>}
                     <p className="truncate text-xs text-slate-500">
                       {resource === "clients"
                         ? [row.company_name, row.email, row.service].filter(Boolean).join(" · ")

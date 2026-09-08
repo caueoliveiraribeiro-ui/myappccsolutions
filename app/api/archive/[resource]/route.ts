@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { cookies } from "next/headers"
 import { getSession } from "@/lib/auth"
 import { db } from "@/lib/supabase"
+import { accountAccess, upgradeResponse, planWriteError } from "@/lib/plan-access"
 
 type Resource = "clients" | "projects"
 type Context = { params: Promise<{ resource: string }> }
@@ -20,8 +21,10 @@ export async function GET(_: Request, { params }: Context) {
   const user = await session()
   if (!user) return NextResponse.json({ error: "Please sign in again." }, { status: 401 })
 
-  const resource = await resourceFrom(params)
+    const resource = await resourceFrom(params)
   if (!resource) return NextResponse.json({ error: "This archive is unavailable." }, { status: 404 })
+
+  if (!(await accountAccess(user.id)).features.includes(resource)) return upgradeResponse()
 
   try {
     const items = await db(`${resource}?user_id=eq.${user.id}&archived=eq.true&select=*&order=updated_at.desc&limit=50`)
@@ -39,6 +42,8 @@ export async function PATCH(request: Request, { params }: Context) {
   const resource = await resourceFrom(params)
   if (!resource) return NextResponse.json({ error: "This archive is unavailable." }, { status: 404 })
 
+  if (!(await accountAccess(user.id)).features.includes(resource)) return upgradeResponse()
+
   try {
     const body = await request.json()
     const id = String(body?.id || "")
@@ -51,7 +56,7 @@ export async function PATCH(request: Request, { params }: Context) {
     if (archived && !rows[0].archived) {
       const archivedRows = await db(`${resource}?user_id=eq.${user.id}&archived=eq.true&select=id&limit=51`)
       if ((archivedRows || []).length >= 50) {
-        return NextResponse.json({ error: `Your archived ${resource} list is full. Restore or delete an item before archiving another.` }, { status: 409 })
+        return NextResponse.json({ error: `Your archived ${resource} list is full. Restore an item before archiving another.` }, { status: 409 })
       }
     }
 
@@ -62,6 +67,6 @@ export async function PATCH(request: Request, { params }: Context) {
     return NextResponse.json({ item: updated?.[0] || { id, archived } })
   } catch (error) {
     console.error("Orbit archive update failed", error)
-    return NextResponse.json({ error: "We could not update the archive. Your record is still safe." }, { status: 500 })
+    return planWriteError(error) || NextResponse.json({ error: "We could not update the archive. Your record is still safe." }, { status: 500 })
   }
 }
