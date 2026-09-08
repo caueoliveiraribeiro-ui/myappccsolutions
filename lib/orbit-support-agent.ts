@@ -2,6 +2,8 @@ export type OrbitSupportContext = {
   page?: string
   plan?: string
   features?: string[]
+  authenticated?: boolean
+  history?: {role: "user" | "assistant"; content: string}[]
 }
 
 export type OrbitSupportResult = {
@@ -25,29 +27,42 @@ export async function answerOrbitSupport(
   message: string,
   context: OrbitSupportContext = {},
 ): Promise<OrbitSupportResult> {
-  const text = normalize(message)
+  let text = normalize(message)
+  const previous = [...(context.history || [])].reverse().find(item => item.role === "user")
+  if (/^(yes|no|how|where|and|it|that|still)\b/.test(text) && previous) {
+    const topic = normalize(previous.content).match(/\b(invoice|health|calorie|calendar|project|task|client|lead|stock|crypto|expense|report|plan)\w*\b/)
+    if (topic) text += " " + topic[0]
+  }
   const pageHint = context.page ? ` Since you are on ${context.page}, ` : " "
 
-  if (/human|person|agent|representative|talk to support|speak to support/.test(text)) {
+  if (/^(hi|hello|hey)[!.\s]*$/.test(text)) return {mode:"knowledge",reply:"Hi! What would you like to do in Orbit today? I can help you choose a plan or walk through a feature.",suggestions:["Compare plans","How do invoices work?","How do I track calories?"]}
+  if (/^(thanks|thank you)[!.\s]*$/.test(text)) return {mode:"knowledge",reply:"You're welcome! What else would you like help with?",suggestions:["How do Projects work?","Compare plans"]}
+  if (/not working|won.?t|will not|could not|error|failed|wrong/.test(text)) return {
+    mode:"knowledge",
+    reply:"Let's narrow this down. What did you try, and what exact message appeared? If a save or payment seems uncertain, check whether the record or charge already exists before retrying. I can guide you, but I cannot inspect or change your records from this chat.",
+    suggestions:["Talk to support","Account help"],
+  }
+
+  if (/\b(human|representative|support agent)\b|talk to support|speak to support/.test(text)) {
     return {
       mode: "knowledge",
-      needsHuman: true,
+      needsHuman: Boolean(context.authenticated),
       reply:
-        "Human handoff is being added to Orbit Support. For now, describe what happened and I’ll help you narrow down the issue and the safest next step.",
+        context.authenticated ? "I'll flag this conversation for the support team. Tell us what happened and the screen involved. Return to this chat to see replies; I cannot promise a response time." : "You can ask product questions here without signing in. For account-specific human support, sign in and choose Talk to support. Never send passwords or reset links here.",
       suggestions: ["Report a problem", "Account help"],
     }
   }
 
-  if (/billing|plan|subscription|upgrade|price|payment|charge|invoice/.test(text)) {
+  if (/billing|plan|subscription|upgrade|price/.test(text) && !/invoice/.test(text)) {
     return {
       mode: "knowledge",
       reply:
-        `Absolutely — I can help with plans and billing.${pageHint}Orbit keeps access tied to the account that purchased the plan. You can compare plans on the Plans page and manage an active subscription from Invite & Sharing. If a payment looks wrong, tell me what you see, but never send card or banking details.`,
+        "Compare plans at /plans: Personal is US$29.99/month, Small Business US$99.99/month, and Big Business US$189.99/month. Invoices require Big Business or owner access. Business Customization is US$599.99/month for a separately tailored workspace. Final taxes and billing terms are shown by Hotmart before payment. Which feature do you need?",
       suggestions: ["Why is a feature locked?", "Where are my account settings?"],
     }
   }
 
-  if (/password|login|sign in|account|email|forgot|reset/.test(text)) {
+  if (/password|login|sign in|account|forgot|reset/.test(text) && !/invoice/.test(text)) {
     return {
       mode: "knowledge",
       reply:
@@ -68,7 +83,7 @@ export async function answerOrbitSupport(
   if (/health|calorie|food|meal|nutrition/.test(text)) {
     return {
       mode: "knowledge",
-      reply: "Open Personal, then Health, to record what you ate. Choose an item from the food list, enter the grams you consumed, and Orbit adds its calories to today’s total and to your monthly personal history. Health tracking is for organization only, not medical advice.",
+      reply: "Open Personal → Health. Choose the date you ate the food, pick the food group and item, and enter your portion in grams. Select Add to selected day.\n\nOpen a date in Daily consumption history to review its foods, edit a portion or delete an entry. The day's calorie total recalculates automatically. These are tracking estimates, not medical advice.",
       suggestions: ["How do I use Expenses?", "How do I use Investments?"],
     }
   }
@@ -76,7 +91,7 @@ export async function answerOrbitSupport(
   if (/invoice|receipt|pdf/.test(text)) {
     return {
       mode: "knowledge",
-      reply: "Invoices are being added to Orbit’s business workflow. They will use the client or project information you already saved, so you will not need to retype the basics. For now, keep the client name, email, service, amount and charge date up to date in Clients or Projects.",
+      reply: "To create an invoice:\n1. Open Clients → Invoices (Big Business or owner access).\n2. Save your company details and logo, then choose a client or project.\n3. Review the recipient, address, description, amount and due date before saving.\n4. Open the saved invoice to edit it, download its PDF or send it by email.\n\nI can guide you, but I cannot save or send an invoice from this chat.",
       suggestions: ["How do Projects work?", "Billing & plans"],
     }
   }
@@ -117,7 +132,13 @@ export async function answerOrbitSupport(
     }
   }
 
-  if (/finance|expense|money|stock|crypto|investment|report|currency|conversion/.test(text)) {
+  if (/report|payment/.test(text)) return {
+    mode: "knowledge",
+    reply: "Open Reports → Payment ledger. Add a payment, choose the client, amount, currency and date, then set Awaiting payment or Payment received. You can edit or delete a record from its dropdown.\n\nOnly received payments count as received income; awaiting payments stay separate. Use the month and client filters to check the records behind a total before changing it.",
+    suggestions: ["How do invoices work?", "Talk to support"],
+  }
+
+  if (/personal|finance|expense|money|stock|crypto|investment|currency|conversion/.test(text)) {
     return {
       mode: "knowledge",
       reply:
@@ -138,7 +159,7 @@ export async function answerOrbitSupport(
   if (/bug|problem|broken|error|not working|doesn.?t work|issue/.test(text)) {
     return {
       mode: "knowledge",
-      needsHuman: true,
+      needsHuman: Boolean(context.authenticated),
       reply:
         `I’m sorry that happened.${pageHint}Tell me what you clicked, what you expected, and what Orbit did instead. A screenshot or the exact error text is perfect. Please leave out passwords, API keys, payment-card details and private tokens.`,
       suggestions: ["Account help", "Calendar help"],

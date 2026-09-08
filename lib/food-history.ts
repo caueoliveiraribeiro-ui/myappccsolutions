@@ -1,5 +1,13 @@
 export type FoodEntry = { id: string; category: string; food_name: string; grams: number; calories: number; consumed_at: string }
 
+export function foodTimestamp(day: string, now = new Date()): string | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return null
+  // Noon keeps a historical meal on its selected local day across DST changes.
+  const date = new Date(`${day}T12:00:00`)
+  if (foodDayKey(date) !== day || day > foodDayKey(now)) return null
+  return day === foodDayKey(now) ? now.toISOString() : date.toISOString()
+}
+
 // Use the user's local calendar day, not the UTC date in the stored timestamp.
 export function foodDayKey(value: string | Date): string {
   const date = new Date(value)

@@ -44,6 +44,9 @@ export async function POST(req: NextRequest) {
     : {}
 
   const context: OrbitSupportContext = {
+    authenticated: Boolean(user),
+    // Conversation snippets are untrusted hints for product guidance, never permissions.
+    history: Array.isArray(data.history) ? data.history.slice(-6).filter((item): item is {role:"user"|"assistant";content:string} => Boolean(item && typeof item === "object" && ["user","assistant"].includes(item.role) && typeof item.content === "string")).map(item=>({role:item.role,content:item.content.slice(0,1000)})) : [],
     page: typeof rawContext.page === "string" ? rawContext.page.slice(0, 80) : undefined,
     plan: typeof rawContext.plan === "string" ? rawContext.plan.slice(0, 80) : undefined,
     features: Array.isArray(rawContext.features)

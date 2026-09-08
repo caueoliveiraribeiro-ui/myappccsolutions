@@ -60,6 +60,7 @@ export function OrbitSupportChat() {
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const endRef = useRef<HTMLDivElement>(null)
   const lastSupportReplyRef = useRef<string | null>(null)
+  const sendingRef = useRef(false)
 
   const firstName = useMemo(() => {
     const name = (me.name || "").trim().split(/\s+/)[0]
@@ -74,6 +75,7 @@ export function OrbitSupportChat() {
   }, [])
 
   async function syncConversation(silent = true) {
+    if (sendingRef.current && silent) return
     try {
       const response = await fetch("/api/support/conversation", { cache: "no-store" })
       const data = await response.json().catch(() => ({}))
@@ -92,7 +94,10 @@ export function OrbitSupportChat() {
         if (lastSupportReplyRef.current && !open) setUnreadHuman(true)
         lastSupportReplyRef.current = latestHuman.id
       }
-      setMessages(stored)
+      if (!sendingRef.current || !silent) setMessages(current => stored.map((item:Message) => {
+        const previous=current.find(row=>row.id===item.id)
+        return previous?{...item,suggestions:previous.suggestions,needsHuman:previous.needsHuman}:item
+      }))
     } catch (error) {
       if (!silent) console.error(error)
     }
@@ -168,7 +173,8 @@ export function OrbitSupportChat() {
 
   async function sendMessage(raw: string) {
     const message = raw.trim()
-    if (!message || sending) return
+    if (!message || sendingRef.current) return
+    sendingRef.current = true
 
     const optimistic: Message = { id: messageId(), role: "user", sender: "user", content: message }
     setMessages((current) => [...current, optimistic])
@@ -179,7 +185,7 @@ export function OrbitSupportChat() {
       const response = await fetch("/api/support/chat", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ message, context: { page: window.location.pathname, plan: me.access?.plan, features: me.access?.features } }),
+        body: JSON.stringify({ message, history:messages.filter(item=>item.sender!=="system").slice(-6).map(item=>({role:item.role,content:item.content.slice(0,1000)})), context: { page: window.location.pathname, plan: me.access?.plan, features: me.access?.features } }),
       })
       const data = await response.json().catch(() => ({}))
       if (!response.ok) throw new Error(data.error || "Orbit Support is temporarily unavailable.")
@@ -188,6 +194,7 @@ export function OrbitSupportChat() {
       if (data.authenticated) {
         setAuthenticated(true)
         await syncConversation(false)
+        setMessages(current=>current.map((item,index)=>index===current.length-1 && item.sender==="orbit_ai"?{...item,suggestions:Array.isArray(data.suggestions)?data.suggestions.slice(0,3):[],needsHuman:Boolean(data.needsHuman)}:item))
       } else {
         setMessages((current) => [...current, {
           id: messageId(), role: "assistant", sender: "orbit_ai",
@@ -203,6 +210,7 @@ export function OrbitSupportChat() {
         content: error instanceof Error ? error.message : "Orbit Support is temporarily unavailable. Please try again in a moment.",
       }])
     } finally {
+      sendingRef.current = false
       setSending(false)
     }
   }
@@ -233,7 +241,7 @@ export function OrbitSupportChat() {
                   </motion.div>
                   <div className="min-w-0">
                     <h2 className="truncate text-[15px] font-semibold tracking-tight">Orbit Support</h2>
-                    <p className="mt-1 text-xs text-slate-400">{authenticated ? "Connected to your Orbit account" : "Help when you need it"}</p>
+                    <p className="mt-1 text-xs text-slate-400">{authenticated ? "Orbit guide · support inbox connected" : "Orbit guide · no sign-in needed"}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-1">
