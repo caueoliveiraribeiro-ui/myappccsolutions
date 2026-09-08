@@ -16,7 +16,7 @@ export async function POST(request: Request) {
   if (!user) return NextResponse.json({ error: "Please sign in again." }, { status: 401 })
 
   const access = await accountAccess(user.id)
-  if (!access.features.includes("reports")) return upgradeResponse()
+  if (!access.features.includes("invoices")) return upgradeResponse()
 
   try {
     const input = await request.json()
