@@ -38,7 +38,7 @@ const stroke = (x: number, y: number, width: number, height: number, color: stri
 export function invoicePdf(invoice: Invoice) {
   const navy = rgb("07111F"), ink = rgb("102033"), muted = rgb("53677B"), cyan = rgb("12BDE0")
   const cyanSoft = rgb("DDF8FC"), pale = rgb("F5FAFC"), line = rgb("C6E9F0"), white = rgb("FFFFFF"), green = rgb("0D9F7D")
-  const number = plain(invoice.invoice_number) || "DRAFT"
+  const company = plain(invoice.client_company_name) || plain(invoice.client_name) || "YOUR COMPANY"\n  const number = plain(invoice.invoice_number) || "DRAFT"
   const issued = plain(String(invoice.issue_date || "").slice(0, 10)) || "On creation"
   const due = plain(String(invoice.due_date || "").slice(0, 10)) || "On receipt"
   const clientName = plain(invoice.client_name) || "Client"
