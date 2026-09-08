@@ -38,7 +38,7 @@ const stroke = (x: number, y: number, width: number, height: number, color: stri
 export function invoicePdf(invoice: Invoice) {
   const navy = rgb("07111F"), ink = rgb("102033"), muted = rgb("53677B"), cyan = rgb("12BDE0")
   const cyanSoft = rgb("DDF8FC"), pale = rgb("F5FAFC"), line = rgb("C6E9F0"), white = rgb("FFFFFF"), green = rgb("0D9F7D")
-  const company = plain(invoice.client_company_name) || plain(invoice.client_name) || "YOUR COMPANY"
+  const company = plain(invoice.issuer_company_name) || plain(invoice.client_company_name) || plain(invoice.client_name) || "YOUR COMPANY"
   const number = plain(invoice.invoice_number) || "DRAFT"
   const issued = plain(String(invoice.issue_date || "").slice(0, 10)) || "On creation"
   const due = plain(String(invoice.due_date || "").slice(0, 10)) || "On receipt"
@@ -54,7 +54,7 @@ export function invoicePdf(invoice: Invoice) {
     rect(0, 717, 595, 125, navy),
     rect(0, 709, 595, 8, cyan),
     text(company.slice(0, 34), 24, 48, 782, white, "F2"),
-    text("CLIENT BILLING", 8, 49, 765, rgb("92DCEC")),
+    text(invoice.issuer_logo_data ? "INVOICE · VERIFIED BRAND" : "CLIENT BILLING", 8, 49, 765, rgb("92DCEC")),
     text("INVOICE", 10, 426, 786, rgb("9AEAF5"), "F2"),
     text(`# ${number}`, 15, 426, 764, white, "F2"),
     rect(48, 650, 499, 43, white),
