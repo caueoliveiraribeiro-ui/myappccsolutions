@@ -4,6 +4,23 @@ import { getSession } from "@/lib/auth"
 import { db } from "@/lib/supabase"
 import { accountAccess, planWriteError, upgradeResponse } from "@/lib/plan-access"
 
+// The dashboard may translate the text shown inside a status option. Keep the
+// persisted workflow values stable so the Pipeline never depends on UI language.
+const leadStatusAliases: Record<string, string> = {
+  registered: "Registered", registrado: "Registered", registrato: "Registered", registriert: "Registered", enregistré: "Registered", geregistreerd: "Registered",
+  new: "New", novo: "New", nueva: "New", nuevo: "New", neu: "New", nouveau: "New", nuova: "New", nieuw: "New", "新規": "New", "새로운": "New",
+  contacted: "Contacted", contatado: "Contacted", contactado: "Contacted", kontaktiert: "Contacted", "contacté": "Contacted", contattato: "Contacted", gecontacteerd: "Contacted", "連絡済み": "Contacted", "연락됨": "Contacted",
+  qualified: "Qualified", qualificado: "Qualified", calificado: "Qualified", qualifiziert: "Qualified", "qualifié": "Qualified", qualificato: "Qualified", gekwalificeerd: "Qualified", "適格": "Qualified", "자격 있음": "Qualified",
+  proposal: "Proposal", proposta: "Proposal", propuesta: "Proposal", angebot: "Proposal", proposition: "Proposal", voorstel: "Proposal", "提案": "Proposal", "제안": "Proposal",
+  client: "Client", cliente: "Client", kunde: "Client", klant: "Client", "顧客": "Client", "고객": "Client", won: "Won", win: "Won", ganho: "Won", ganado: "Won", gewonnen: "Won", "gagné": "Won", vinto: "Won", gewonnenes: "Won",
+  lost: "Lost", perdido: "Lost", perdida: "Lost", verloren: "Lost", perdu: "Lost", perso: "Lost", "失注": "Lost", "실패": "Lost",
+}
+
+function canonicalLeadStatus(value: unknown) {
+  const raw = String(value ?? "").trim()
+  return leadStatusAliases[raw.toLowerCase()] || raw
+}
+
 export async function POST(request: Request) {
  const user = await getSession((await cookies()).get("orbit_session")?.value || "")
  if (!user) return NextResponse.json({error:"Please sign in again."},{status:401})
@@ -19,6 +36,7 @@ export async function POST(request: Request) {
   for(const who of [user.id,owner]) { const access=await accountAccess(who);if(!access.features.includes("leads")||!access.features.includes("clients")||!access.features.includes("projects"))return upgradeResponse() }
   const keys=new Set(["company","contact_name","email","phone","address","city","country","service","description","notes","estimated_value","currency","last_call_date","next_follow_up_date","status","archived","directory_hidden"])
   const clean=Object.fromEntries(Object.entries(changes).filter(([k])=>keys.has(k)).map(([k,v])=>[k,(k.endsWith("_date")&&v==="")?null:v]))
+  if(clean.status) clean.status=canonicalLeadStatus(clean.status)
   if(clean.status&&!["Registered","New","Contacted","Qualified","Proposal","Client","Won","Lost"].includes(String(clean.status)))return NextResponse.json({error:"Choose a valid pipeline stage."},{status:400})
   if(clientId && !clean.status)return NextResponse.json({error:"Choose a pipeline stage."},{status:400})
   if(!id&&!clientId&&!String(clean.company||"").trim())return NextResponse.json({error:"Enter a company or lead name."},{status:400})
