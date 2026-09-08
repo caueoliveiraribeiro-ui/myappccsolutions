@@ -22,11 +22,17 @@ export async function getOrCreateOpenConversation(userId: string, subject = "Orb
     return existing
   }
 
-  const created = await db("support_conversations", {
-    method: "POST",
-    body: JSON.stringify({ user_id: userId, subject }),
-  })
-  return created?.[0] || null
+  try {
+    const created = await db("support_conversations", {
+      method: "POST",
+      body: JSON.stringify({ user_id: userId, subject }),
+    })
+    if (created?.[0]) return created[0]
+  } catch (error) {
+    // A simultaneous message may have created the user’s one allowed conversation.
+    console.warn("ORBIT_SUPPORT_CONVERSATION_CREATE_RACED", { userId, error: String(error) })
+  }
+  return await getOpenConversation(userId)
 }
 
 export async function addSupportMessage(conversationId: string, sender: SupportSender, content: string) {
