@@ -10,7 +10,7 @@ export function yearlyReceivedTotal(payments:Row[],convert:(amount:unknown,row:R
 }
 export function overviewMonthTotals({leads=[],projects=[],payments=[],groceries=[],expenses=[]}:Record<string,Row[]>,convert:(amount:unknown,row:Row)=>number,month=calendarMonth()){
   const same=(date:unknown)=>String(date||"").slice(0,7)===month
-  const active=leads.filter(row=>!row.archived&&!["Client","Won","Lost"].includes(row.status)&&same(row.created_at))
+  const active=leads.filter(row=>!row.archived&&!["Registered","Client","Won","Lost"].includes(row.status)&&same(row.created_at))
   const waiting=awaitingPaymentRows(projects,payments).filter(row=>same(row.date))
   const received=payments.filter(row=>isPaymentReceived(row)&&same(row.received_at||row.created_at))
   return {

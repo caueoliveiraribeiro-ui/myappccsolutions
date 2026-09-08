@@ -19,7 +19,7 @@ export function createFinancialReport(input:ReportInput){
  const groceries=input.groceries.filter(r=>inRange(groceryDate(r)))
  const groceryAmount=(r:ReportRow)=>Number(r.actual_cost||r.estimated_cost||0)
  const awaiting=awaitingPaymentRows(input.projects,input.payments),overdue=awaiting.filter(r=>day(r.date)&&day(r.date)<today)
- const activeLeads=input.leads.filter(r=>!r.archived&&!["Client","Won","Lost"].includes(r.status))
+ const activeLeads=input.leads.filter(r=>!r.archived&&!["Registered","Client","Won","Lost"].includes(r.status))
  const income=sum(receipts,r=>r.amount),expense=sum(expenses,r=>r.amount),grocery=sum(groceries,groceryAmount),net=income-expense-grocery
  const outstanding=sum(awaiting,r=>r.amount),overdueTotal=sum(overdue,r=>r.amount),pipeline=sum(activeLeads,r=>r.estimated_value)
  const held=input.holdings.filter(r=>Number(r.remaining_quantity??r.quantity??0)>0)

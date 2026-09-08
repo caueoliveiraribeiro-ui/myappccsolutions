@@ -73,7 +73,7 @@ export function invoicePdf(invoice: Invoice) {
   const clientName = plain(invoice.client_name) || "Client"
   const clientEmail = plain(invoice.client_email)
   const clientAddress = wrap(invoice.client_address, 48).slice(0, 4)
-  const service = wrap(invoice.service_name || "Professional services", 44).slice(0, 8)
+  const service = [...wrap(invoice.service_name || "Professional services", 44), ...wrap(invoice.description || "", 44)].slice(0, 16)
   const status = ["draft", "sent", "paid", "overdue", "void"].includes(String(invoice.status || "").toLowerCase()) ? String(invoice.status).toUpperCase() : "DRAFT"
   const total = money(invoice.amount, invoice.currency)
   const logo = jpegLogo(invoice.issuer_logo_data)

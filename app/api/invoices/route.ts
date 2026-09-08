@@ -51,6 +51,7 @@ export async function POST(request: Request) {
       issuer_logo_data: String(branding.logo_data_url || "").slice(0, 1_300_000) || null,
       invoice_number,
       service_name: String(input.service_name || "").trim() || "Professional services",
+      description: String(input.description || "").trim().slice(0, 500) || null,
       amount,
       currency: /^[A-Z]{3}$/.test(currency) ? currency : "USD",
       issue_date: isoDate(input.issue_date, issuedToday),
