@@ -182,10 +182,15 @@ export async function DELETE(request:Request,{params}:Context){
  const u=await auth();if(!u)return NextResponse.json({error:"Please sign in again."},{status:401})
  const {resource}=await params;if(!allowed.has(resource))return NextResponse.json({error:"Section unavailable."},{status:404})
  try{
-  const {id}=await request.json(),row=await target(resource,id,u)
+  const {id,permanent,confirmation}=await request.json(),row=await target(resource,id,u)
   if(!row)return NextResponse.json({error:"You cannot delete this record."},{status:403})
   if(!await permitted(u.id,resource,row)||!await permitted(row.user_id,resource,row))return upgradeResponse()
   if (["leads","clients","projects"].includes(resource)) {
+    if(permanent===true) {
+      if(!row.archived || confirmation!=="DELETE")return NextResponse.json({error:"Only archived records can be permanently deleted. Please confirm first."},{status:400})
+      await db(`${resource}?id=eq.${encodeURIComponent(id)}&user_id=eq.${row.user_id}&archived=eq.true`,{method:"DELETE"})
+      return NextResponse.json({ok:true,permanent:true})
+    }
     const items = await db(`${resource}?id=eq.${encodeURIComponent(id)}&user_id=eq.${row.user_id}`, {
       method:"PATCH", body:JSON.stringify({archived:true,deleted_at:row.deleted_at || new Date().toISOString()})
     })

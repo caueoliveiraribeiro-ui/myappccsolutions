@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react"
 import { Archive, RotateCcw, X } from "lucide-react"
 import { toast } from "sonner"
+import { PermanentDeleteButton } from "@/components/permanent-delete-button"
 
 type Row = Record<string, any>
 type ArchiveView = "clients" | "projects" | null
@@ -242,6 +243,7 @@ export function OrbitArchiveControls() {
                 <p className="truncate text-xs text-slate-500">{view === "clients" ? [row.company_name, row.email, row.service].filter(Boolean).join(" · ") : [row.client, row.kind, row.stage].filter(Boolean).join(" · ")}</p>
               </div>
               <button type="button" onClick={() => setArchived(view, row, false)} className={buttonClass}><RotateCcw size={14} className="mr-2" /> Restore</button>
+              <PermanentDeleteButton resource={view} id={row.id} onDeleted={() => { void refresh(); }}/>
             </div>
           ))}
         </div>

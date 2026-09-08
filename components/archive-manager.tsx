@@ -5,6 +5,7 @@ import { createPortal } from "react-dom"
 import { Archive, RotateCcw, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
+import { PermanentDeleteButton } from "@/components/permanent-delete-button"
 
 type Resource = "clients" | "projects"
 type Row = Record<string, any>
@@ -98,6 +99,7 @@ export function ArchiveManagerButton({
                     <RotateCcw size={14} />
                     Restore
                   </Button>
+                  <PermanentDeleteButton resource={resource} id={row.id} onDeleted={() => setItems(current => current.filter(item => item.id !== row.id))}/>
                 </div>
               ))}
             </div>
