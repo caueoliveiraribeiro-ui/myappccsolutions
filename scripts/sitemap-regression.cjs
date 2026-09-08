@@ -10,7 +10,7 @@ function load(file) {
   return JSON.parse(JSON.stringify(exports.default()));
 }
 const sitemap = load("app/sitemap.ts");
-assert.deepEqual(sitemap.map(row => row.url), ["https://orbit-lm.com/", "https://orbit-lm.com/plans"]);
+assert.deepEqual(sitemap.map(row => row.url), ["https://orbit-lm.com/", "https://orbit-lm.com/plans", "https://orbit-lm.com/privacy-policy", "https://orbit-lm.com/terms-of-service"]);
 assert.ok(sitemap.every(row => !row.lastModified));
 const robots = load("app/robots.ts");
 assert.equal(robots.sitemap, "https://orbit-lm.com/sitemap.xml");
