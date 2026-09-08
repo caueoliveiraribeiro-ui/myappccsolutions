@@ -11,14 +11,14 @@ async function userForRequest() {
 export async function GET() {
   const user = await userForRequest()
   if (!user) return NextResponse.json({ error: "Please sign in again." }, { status: 401 })
-  if (!(await accountAccess(user.id)).features.includes("reports")) return upgradeResponse()
+  if (!(await accountAccess(user.id)).features.includes("invoices")) return upgradeResponse()
   const rows = await db(`invoice_branding?user_id=eq.${encodeURIComponent(user.id)}&select=company_name,logo_data_url&limit=1`).catch(() => [])
   return NextResponse.json({ branding: rows?.[0] || { company_name: "", logo_data_url: "" } })
 }
 export async function POST(request: Request) {
   const user = await userForRequest()
   if (!user) return NextResponse.json({ error: "Please sign in again." }, { status: 401 })
-  if (!(await accountAccess(user.id)).features.includes("reports")) return upgradeResponse()
+  if (!(await accountAccess(user.id)).features.includes("invoices")) return upgradeResponse()
   try {
     const input = await request.json()
     const logo = String(input.logo_data_url || "")
