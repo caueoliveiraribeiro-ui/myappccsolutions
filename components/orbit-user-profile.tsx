@@ -39,6 +39,7 @@ export function OrbitUserProfile() {
   const [passwordBusy, setPasswordBusy] = useState(false)
   const [selectedCountry, setSelectedCountry] = useState("US")
   const [selectedCurrency, setSelectedCurrency] = useState("USD")
+  const [selectedMarket, setSelectedMarket] = useState("US")
   const triggerRef = useRef<HTMLElement | null>(null)
   const triggerCleanup = useRef<(() => void) | null>(null)
 
@@ -49,6 +50,7 @@ export function OrbitUserProfile() {
     setProfile(next)
     setSelectedCountry(next.country || "US")
     setSelectedCurrency(next.currency || "USD")
+    setSelectedMarket(next.preferred_market || next.country || "US")
   }
 
   function syncSidebar(next: Profile) {
@@ -174,6 +176,7 @@ export function OrbitUserProfile() {
       setProfile(next)
       setSelectedCountry(next.country || selectedCountry)
       setSelectedCurrency(next.currency || selectedCurrency)
+      setSelectedMarket(next.preferred_market || selectedMarket)
       syncSidebar(next)
       refreshDashboardProfile()
 
@@ -255,30 +258,31 @@ export function OrbitUserProfile() {
               <div className="mb-4 flex items-center gap-2"><MapPin size={17} className="text-cyan-200"/><h3 className="font-semibold">Address & regional preferences</h3></div>
               <div className="grid gap-3 sm:grid-cols-2">
                 <Field label="Address line 1" name="address_line1" defaultValue={profile?.address_line1}/>
-                <Field label="Address line 2" name="address_line2" defaultValue={profile?.address_line2}/>
                 <Field label="City" name="city" defaultValue={profile?.city}/>
                 <Field label="State / region" name="region" defaultValue={profile?.region}/>
                 <Field label="Postal code" name="postal_code" defaultValue={profile?.postal_code}/>
-                <label className="text-xs text-slate-400">Country<select name="country" value={selectedCountry} onChange={(event) => setSelectedCountry(event.target.value)} className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#091522] px-3 text-sm">{countries.map(([code,label])=><option key={code} value={code}>{label}</option>)}</select></label>
                 <label className="text-xs text-slate-400">Language<select name="language" defaultValue={profile?.language || "en"} className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#091522] px-3 text-sm">{languages.map(([code,label])=><option key={code} value={code}>{label}</option>)}</select></label>
-                <label className="text-xs text-slate-400">Default currency<select name="currency" value={selectedCurrency} onChange={(event) => setSelectedCurrency(event.target.value)} className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#091522] px-3 text-sm">{currencies.map((code)=><option key={code}>{code}</option>)}</select></label>
-                <Field label="Time zone" name="timezone" defaultValue={profile?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone} placeholder="America/Sao_Paulo"/>
-                <details className="group rounded-xl border border-white/10 bg-[#091522] text-xs text-slate-300 open:border-cyan-300/30">
+                <div className="sm:col-span-2 rounded-xl border border-cyan-300/15 bg-cyan-300/[.025] p-3">
+                  <p className="mb-3 text-xs font-medium text-cyan-100">Country, currency & market</p>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <label className="text-xs text-slate-400">Country<select name="country" value={selectedCountry} onChange={(event) => setSelectedCountry(event.target.value)} className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#091522] px-3 text-sm">{countries.map(([code,label])=><option key={code} value={code}>{label}</option>)}</select></label>
+                    <label className="text-xs text-slate-400">Default currency<select name="currency" value={selectedCurrency} onChange={(event) => setSelectedCurrency(event.target.value)} className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#091522] px-3 text-sm">{currencies.map((code)=><option key={code}>{code}</option>)}</select></label>
+                  </div>
+                <details className="group mt-3 rounded-xl border border-white/10 bg-[#091522] text-xs text-slate-300 open:border-cyan-300/30">
                   <summary className="flex h-10 cursor-pointer list-none items-center justify-between px-3 font-medium text-slate-300">
                     <span>Available markets</span>
                     <span className="text-cyan-300 transition group-open:rotate-180">⌄</span>
                   </summary>
                   <div className="max-h-48 space-y-1 overflow-y-auto border-t border-white/[.07] p-2">
                     {availableMarkets.map((market) => {
-                      const selected = market.code === selectedCountry && market.currency === selectedCurrency
+                      const selected = market.code === selectedMarket
                       return (
                         <button
                           key={market.code}
                           type="button"
                           aria-pressed={selected}
                           onClick={() => {
-                            setSelectedCountry(market.code)
-                            setSelectedCurrency(market.currency)
+                            setSelectedMarket(market.code)
                           }}
                           className={`flex w-full items-center justify-between gap-3 rounded-lg border px-2.5 py-2 text-left transition ${selected ? "border-cyan-300/50 bg-cyan-300/[.12] text-white" : "border-transparent bg-black/20 text-slate-300 hover:border-white/10 hover:bg-white/[.06]"}`}
                         >
@@ -289,6 +293,9 @@ export function OrbitUserProfile() {
                     })}
                   </div>
                 </details>
+                <input type="hidden" name="preferred_market" value={selectedMarket}/>
+                <p className="mt-2 text-[11px] leading-4 text-slate-500">These choices are independent. Selecting a market never changes your country or default currency.</p>
+                </div>
               </div>
             </section>
 
@@ -330,3 +337,4 @@ function Field({ label, ...props }: { label: string; [key: string]: any }) {
 function Info({ label, value }: { label: string; value: any }) {
   return <div className="flex items-center justify-between gap-3 border-b border-white/[.06] pb-2"><span className="text-slate-500">{label}</span><span className="max-w-[60%] truncate capitalize text-slate-200">{String(value || "—")}</span></div>
 }
+

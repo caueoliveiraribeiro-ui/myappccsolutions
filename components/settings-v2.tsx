@@ -107,6 +107,7 @@ export function SettingsV2({ me, inviteOnly = false }: R) {
 
     return (
       <div className="mx-auto w-full max-w-6xl space-y-5 text-white">
+        <SubscriptionSettings me={me} />
         <section className="relative overflow-hidden rounded-[30px] border border-white/[.09] bg-[#07111f] shadow-[0_30px_90px_rgba(0,0,0,.28)]">
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_9%_0%,rgba(34,211,238,.16),transparent_31%),radial-gradient(circle_at_92%_8%,rgba(167,139,250,.16),transparent_30%)]" />
           <div className="relative p-5 sm:p-7 lg:p-8">
@@ -325,3 +326,4 @@ function AccessNote({ icon, title, copy, tone }: { icon: React.ReactNode; title:
     </div>
   )
 }
+

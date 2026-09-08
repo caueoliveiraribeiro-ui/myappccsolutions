@@ -6,6 +6,7 @@ import { db } from "@/lib/supabase"
 const countries = ["US","BR","GB","DE","FR","ES","IT","PT","CA","AU","JP","KR","MX","NL","CH"]
 const languages = ["en","pt","es","de","fr","it","nl","ja","ko"]
 const currencies = ["USD","BRL","EUR","GBP","CAD","AUD","JPY","KRW","MXN","CHF"]
+const markets = ["US","BR","GB","DE","FR","ES","IT","PT","CA","AU","JP","KR","MX","NL","CH"]
 
 function text(value: unknown, max: number) {
   return String(value || "").trim().slice(0, max)
@@ -27,11 +28,12 @@ export async function POST(request: Request) {
     const country = String(body.country || "US").toUpperCase()
     const language = String(body.language || "en").toLowerCase()
     const currency = String(body.currency || "USD").toUpperCase()
+    const preferredMarket = String(body.preferred_market || country).toUpperCase()
 
     if (!name) {
       return NextResponse.json({ error: "Enter a profile name between 1 and 80 characters." }, { status: 400 })
     }
-    if (!countries.includes(country) || !languages.includes(language) || !currencies.includes(currency)) {
+    if (!countries.includes(country) || !languages.includes(language) || !currencies.includes(currency) || !markets.includes(preferredMarket)) {
       return NextResponse.json({ error: "Invalid profile preference." }, { status: 400 })
     }
 
@@ -42,16 +44,15 @@ export async function POST(request: Request) {
       country,
       language,
       currency,
+      preferred_market: preferredMarket,
       phone: text(body.phone, 40),
       job_title: text(body.job_title, 80),
       company: text(body.company, 120),
       website: text(body.website, 240),
       address_line1: text(body.address_line1, 160),
-      address_line2: text(body.address_line2, 160),
       city: text(body.city, 100),
       region: text(body.region, 100),
       postal_code: text(body.postal_code, 30),
-      timezone: text(body.timezone, 80),
       bio: text(body.bio, 500),
       updated_at: new Date().toISOString(),
     }
@@ -141,3 +142,4 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "We could not save your profile. Please try again." }, { status: 500 })
   }
 }
+

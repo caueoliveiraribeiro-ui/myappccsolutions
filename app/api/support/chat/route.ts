@@ -66,6 +66,9 @@ export async function POST(req: NextRequest) {
         }
       } catch (persistError) {
         console.error("ORBIT_SUPPORT_PERSIST_FAILED", persistError)
+        return NextResponse.json({
+          error: "Your message could not be saved for the Orbit support team. Please try again in a moment.",
+        }, { status: 503 })
       }
     }
 
@@ -78,3 +81,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Orbit Support is temporarily unavailable" }, { status: 503 })
   }
 }
+

@@ -7,7 +7,7 @@ type ProfilePreferences = {
   country: string
   language: string
   currency: string
-  timezone: string
+  market: string
 }
 
 function preferences(profile: Record<string, any>): ProfilePreferences {
@@ -15,19 +15,19 @@ function preferences(profile: Record<string, any>): ProfilePreferences {
     country: String(profile.country || "US").toUpperCase(),
     language: String(profile.language || "en").toLowerCase(),
     currency: String(profile.currency || "USD").toUpperCase(),
-    timezone: String(profile.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"),
+    market: String(profile.preferred_market || profile.country || "US").toUpperCase(),
   }
 }
 
 function signature(value: ProfilePreferences) {
-  return [value.country, value.language, value.currency, value.timezone].join("|")
+  return [value.country, value.language, value.currency, value.market].join("|")
 }
 
 function applyDocumentPreferences(value: ProfilePreferences) {
   document.documentElement.lang = value.language || "en"
   document.documentElement.dataset.orbitCountry = value.country
   document.documentElement.dataset.orbitCurrency = value.currency
-  document.documentElement.dataset.orbitTimezone = value.timezone
+  document.documentElement.dataset.orbitMarket = value.market
 }
 
 export function OrbitProfilePreferenceSync() {
@@ -89,3 +89,4 @@ export function OrbitProfilePreferenceSync() {
 
   return null
 }
+

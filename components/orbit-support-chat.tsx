@@ -140,6 +140,12 @@ export function OrbitSupportChat() {
     if (open) endRef.current?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "end" })
   }, [messages, sending, open, reduce])
 
+  useEffect(() => {
+    const openSupport = () => setOpen(true)
+    window.addEventListener("orbit:open-support", openSupport)
+    return () => window.removeEventListener("orbit:open-support", openSupport)
+  }, [])
+
   function close() {
     setOpen(false)
     window.setTimeout(() => launcherRef.current?.focus(), 0)
@@ -293,3 +299,4 @@ export function OrbitSupportChat() {
     </div>
   )
 }
+

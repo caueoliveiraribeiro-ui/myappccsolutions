@@ -13,10 +13,10 @@ export function BillingReminders({clients=[],tasks=[],editTask,currency="USD",re
  return <details className="group/upcoming rounded-xl min-w-0 border border-red-400/70 bg-gradient-to-br from-[#4a141e] via-[#241018] to-[#0b101a] font-bold text-white shadow-[0_0_25px_rgba(248,113,113,.16)]">
  <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-xl p-5 text-lg font-bold text-red-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-300"><span>Upcoming client payments</span><span aria-hidden="true" className="text-red-300 transition-transform group-open/upcoming:rotate-180">⌄</span></summary>
  <div className="border-t border-red-300/20 p-5">
- <p className="mt-1 text-xs text-blue-200">Monthly, biweekly and one-time clients with a charge date and service amount get an Awaiting payment record in Reports within 10 days of their charge date.</p>
- <p className="mt-1 text-xs text-slate-400">Monthly and biweekly charges. A red Charge Client task is created one day before the due date (UTC). Overdue charges remain visible.</p>
+ <p className="mt-1 text-xs text-blue-200">This is your payment watchlist. It highlights client charges that are coming up, due today, or overdue, so you always know what needs attention.</p>
+ <p className="mt-1 text-xs text-slate-400">Within 10 days of a charge date, Orbit prepares an Awaiting payment item in Reports. One day before the due date, it also creates a red Charge Client task. Overdue charges stay visible until resolved.</p>
  {!ready&&<p role="alert" className="mt-3 text-sm text-amber-200">Billing reminders are unavailable. Run the latest SQL migration and refresh.</p>}
- {recurring.length===0?<p className="mt-4 text-sm text-slate-400">Set a recurring billing frequency and charge date in Clients to see the next payments here.</p>:<div className="mt-4 max-h-80 space-y-3 overflow-y-auto">{recurring.map((c:Row)=>{
+ {recurring.length===0?<p className="mt-4 text-sm text-slate-400">Add a billing frequency, next charge date and service amount in Clients. Your upcoming payments will appear here automatically.</p>:<div className="mt-4 max-h-80 space-y-3 overflow-y-auto">{recurring.map((c:Row)=>{
  const due=String(c.charge_date).slice(0,10),urgent=due<=tomorrow,task=tasks.find((t:Row)=>t.billing_client_id===c.id&&String(t.billing_due_date).slice(0,10)===due);
  return <details key={c.id} className={`rounded-xl border p-4 ${urgent?"border-red-400/60 bg-red-500/10":"border-white/10 bg-black/20"}`}>
  <summary className="flex cursor-pointer flex-wrap justify-between gap-3"><div><b>{c.name}</b><p className="text-xs text-slate-400">{c.billing_frequency} · {due} · {due<today?"Overdue":due===today?"Due today":due===tomorrow?"Due tomorrow":"Upcoming"}</p></div><b className={urgent?"text-red-200":"text-blue-200"}>{money(convert(c.service_amount,c))}</b></summary>
@@ -33,4 +33,5 @@ function InvoiceNumber({task,editTask}:Row){
  <span className="text-xs text-red-200">{task.title} · {task.status}</span>
  </form>
 }
+
 
