@@ -20,6 +20,16 @@ export async function POST(request: Request) {
 
   try {
     const input = await request.json()
+    // Foreign keys prove existence, not ownership. Check both links server-side.
+    for (const [field, resource] of [["client_id", "clients"], ["project_id", "projects"]] as const) {
+      const id = input[field]
+      if (!id) continue
+      if (typeof id !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+        return NextResponse.json({ error: "Please choose a valid client or project." }, { status: 400 })
+      }
+      const linked = await db(`${resource}?id=eq.${encodeURIComponent(id)}&user_id=eq.${encodeURIComponent(user.id)}&select=id&limit=1`)
+      if (!linked?.[0]) return NextResponse.json({ error: "This client or project is not available in your workspace." }, { status: 403 })
+    }
     const client_name = String(input.client_name || "").trim()
     const requestedNumber = String(input.invoice_number || "").trim()
     const amount = Number(input.amount)

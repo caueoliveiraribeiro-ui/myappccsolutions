@@ -62,7 +62,13 @@ export function OrbitUserProfile() {
     if (nameNode) nameNode.textContent = next.name || "Orbit member"
     if (emailNode) emailNode.textContent = next.email || ""
     const avatarBox = card.querySelector("label > div") as HTMLElement | null
-    if (avatarBox && next.avatar_url) avatarBox.innerHTML = `<img src="${String(next.avatar_url).replaceAll('"','&quot;')}" alt="Profile avatar" class="h-full w-full object-cover" />`
+    if (avatarBox && next.avatar_url) {
+      const img = document.createElement("img")
+      img.src = String(next.avatar_url)
+      img.alt = "Profile avatar"
+      img.className = "h-full w-full object-cover"
+      avatarBox.replaceChildren(img)
+    }
     else if (avatarBox) avatarBox.textContent = initials(next.name)
   }
 

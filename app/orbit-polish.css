@@ -1,0 +1,50 @@
+/* Dashboard themes are scoped: marketing, invoices and uploaded media keep their colors. */
+.orbit-sidebar-controls > button:first-child { width:auto; flex:1; min-width:0; }
+.orbit-theme-toggle { display:grid; place-items:center; width:48px; height:68px; flex-shrink:0; border:1px solid #67e8f940; border-radius:1rem; color:#a5f3fc; background:#67e8f90e; transition:background .2s, border-color .2s; }
+.orbit-theme-toggle:hover { background:#22d3ee22; border-color:#67e8f980; }
+.orbit-theme-toggle:focus-visible { outline:2px solid #22d3ee; outline-offset:3px; }
+@media(min-width:1024px) { .orbit-sidebar[data-collapsed="true"] .orbit-sidebar-controls { flex-wrap:wrap; } .orbit-sidebar[data-collapsed="true"] .orbit-sidebar-controls > button { width:100%; flex-basis:100%; height:44px; } }
+@media(max-width:1023px) { .orbit-theme-toggle { height:44px; } }
+.wealth-dashboard > .fixed { pointer-events:none; animation:orbit-ambient-settle 16s ease-in-out infinite alternate; }
+@keyframes orbit-ambient-settle { to { opacity:.7; } }
+.wealth-dashboard [data-slot="card"] { border-radius:20px; border-color:#67e8f92e; box-shadow:inset 0 1px #ffffff08,0 8px 28px #02061716; }
+.wealth-dashboard h1,.wealth-dashboard h2,.wealth-dashboard h3 { letter-spacing:-.025em; text-wrap:balance; }
+.wealth-dashboard :is(input,select,textarea):focus-visible { outline:2px solid #22d3ee; outline-offset:2px; }
+.wealth-dashboard :is(button,summary) { touch-action:manipulation; }
+.wealth-dashboard summary { cursor:pointer; }
+.orbit-page-arrival { animation:orbit-arrival .38s cubic-bezier(.16,1,.3,1) both; }
+@keyframes orbit-arrival { from { opacity:.3; transform:translateY(8px); } to { opacity:1; transform:none; } }
+.orbit-home h1 { animation:orbit-arrival .7s cubic-bezier(.16,1,.3,1) both; }
+.orbit-home h1 > span { background-size:180% 100%; animation:orbit-type-glow 9s ease-in-out infinite alternate; }
+@keyframes orbit-type-glow { to { background-position:100% 50%; } }
+/* Stop drifting the form while someone is typing. */
+.login-shell:focus-within { animation-play-state:paused; }
+html[data-orbit-theme="light"]:has(.wealth-dashboard) { color-scheme:light; --background:#f3f7fc; --foreground:#172b44; --card:#fff; --card-foreground:#172b44; --popover:#fff; --popover-foreground:#172b44; --muted:#eaf0f8; --muted-foreground:#52657c; --border:#c9dae8; --input:#c9dae8; }
+html[data-orbit-theme="light"] .wealth-dashboard { background:#f3f7fc; color:#172b44; }
+html[data-orbit-theme="light"] .wealth-dashboard > .fixed { opacity:.22; }
+html[data-orbit-theme="light"] .orbit-sidebar { background:#f8fbfff5; border-color:#bcd8e9; box-shadow:0 12px 38px #24436a0b; }
+html[data-orbit-theme="light"] .orbit-theme-toggle { color:#075985; background:#e0f5fc; border-color:#9cd5e5; }
+/* Compatibility layer for existing dark-only utility classes, including portal dialogs. */
+html[data-orbit-theme="light"]:has(.wealth-dashboard) :is(.wealth-dashboard,[role="dialog"],[data-radix-popper-content-wrapper]) :is([class*="bg-[#0"],[class*="bg-[#1"],[class*="bg-slate-9"],[class*="bg-gray-9"],[class*="bg-white/"],[data-slot="card"]) { background-color:#fff; background-image:none; }
+html[data-orbit-theme="light"]:has(.wealth-dashboard) :is(.wealth-dashboard,[role="dialog"],[data-radix-popper-content-wrapper]) :is(.text-white,[class*="text-slate-1"],[class*="text-slate-2"],[class*="text-slate-3"]) { color:#172b44; }
+html[data-orbit-theme="light"]:has(.wealth-dashboard) :is(.wealth-dashboard,[role="dialog"],[data-radix-popper-content-wrapper]) :is([class*="text-slate-4"],[class*="text-slate-5"],[class*="text-gray-4"]) { color:#52657c; }
+html[data-orbit-theme="light"]:has(.wealth-dashboard) :is(.wealth-dashboard,[role="dialog"],[data-radix-popper-content-wrapper]) :is([class*="text-cyan-"],[class*="text-sky-"],[class*="text-blue-2"]) { color:#096887; }
+html[data-orbit-theme="light"]:has(.wealth-dashboard) :is(.wealth-dashboard,[role="dialog"],[data-radix-popper-content-wrapper]) :is([class*="text-violet-"],[class*="text-purple-"]) { color:#6d42ae; }
+html[data-orbit-theme="light"]:has(.wealth-dashboard) :is(.wealth-dashboard,[role="dialog"],[data-radix-popper-content-wrapper]) :is(input,select,textarea) { background:#f8fbff; color:#172b44; border-color:#bed1e3; color-scheme:light; }
+html[data-orbit-theme="light"]:has(.wealth-dashboard) input::placeholder,html[data-orbit-theme="light"]:has(.wealth-dashboard) textarea::placeholder { color:#62778c; }
+html[data-orbit-theme="light"]:has(.wealth-dashboard) input::-webkit-calendar-picker-indicator { filter:none; }
+html[data-orbit-theme="light"] .wealth-dashboard .metric-card--blue { background:linear-gradient(135deg,#c6edff,#8bd0ff)!important; }
+html[data-orbit-theme="light"] .wealth-dashboard .metric-card--orange { background:linear-gradient(135deg,#fff1d9,#ffdfba)!important; color:#843907; border-color:#fb923c; }
+html[data-orbit-theme="light"] .wealth-dashboard .metric-card--orange [class*="text-orange-"] { color:#92400e; }
+html[data-orbit-theme="light"] .wealth-dashboard .current-price-pill { background:#e3f8ff; color:#075985; box-shadow:0 0 14px #22d3ee25; }
+html[data-orbit-theme="light"] .wealth-dashboard :is([class*="text-emerald-"],[class*="text-green-"]) { color:#08734e; }
+html[data-orbit-theme="light"] .wealth-dashboard :is([class*="text-red-"],[class*="text-rose-"]) { color:#b4233c; }
+html[data-orbit-theme="light"] .wealth-dashboard .recharts-cartesian-axis-tick-value { fill:#52657c; }
+html[data-orbit-theme="light"] .wealth-dashboard .recharts-tooltip-wrapper { color:#172b44; }
+html[data-orbit-theme="light"] .wealth-dashboard [class*="text-blue-1"] { color:#096887; }
+html[data-orbit-theme="light"] .wealth-dashboard :is([class*="bg-red-9"],[class*="bg-rose-9"]) { background:#fff0f1; }
+html[data-orbit-theme="light"] .wealth-dashboard :is([class*="bg-emerald-9"],[class*="bg-green-9"]) { background:#eafaf1; }
+html[data-orbit-theme="light"] .wealth-dashboard [class*="bg-black/"] { background-color:#eef3f9; }
+@media(prefers-reduced-motion:reduce) {
+ .orbit-home *, .orbit-home *::before, .orbit-home *::after, .wealth-dashboard *, .wealth-dashboard *::before, .wealth-dashboard *::after { animation:none!important; transition:none!important; scroll-behavior:auto!important; }
+}

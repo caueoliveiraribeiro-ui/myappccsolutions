@@ -3,6 +3,8 @@ import type { Metadata } from "next"
 import { Figtree } from "next/font/google"
 import "./globals.css"
 import "./mobile.css"
+import "./orbit-polish.css"
+import { OrbitThemeProvider } from "@/components/orbit-theme"
 import { Toaster } from "@/components/ui/sonner"
 import { OrbitSupportChat } from "@/components/orbit-support-chat"
 import { LeadsManagerGoogleOnly } from "@/components/leads-manager-google-only"
@@ -30,8 +32,9 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className={`${figtree.variable} antialiased`}>
+    <html lang="en" suppressHydrationWarning className={`${figtree.variable} antialiased`}>
       <body className="font-sans">
+        <OrbitThemeProvider>
         {children}
         <OrbitSupportChat />
         <LeadsManagerGoogleOnly />
@@ -41,7 +44,8 @@ export default function RootLayout({
         <OrbitProfilePreferenceSync />
         <OrbitImprovementPrompt />
         <OrbitArchiveControls />
-        <Toaster richColors theme="dark" />
+        <Toaster richColors />
+        </OrbitThemeProvider>
       </body>
     </html>
   )
