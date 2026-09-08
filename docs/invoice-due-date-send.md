@@ -22,6 +22,14 @@ An incomplete batch is logged as an error requiring operator review on the same
 UTC date. Increase scheduling/queue capacity before growing beyond this volume.
 Required production variables: CRON_SECRET, RESEND_API_KEY, RESEND_FROM_EMAIL.
 
+After applying invoice-billing-cycle.sql, confirmed sends set Awaiting payment.
+The matching client's current charge date advances one calendar month (clamped
+to the last valid day) or 14 days for biweekly billing. One-time billing clears
+the next charge date. Dates already moved by the user and archived clients are
+not overwritten. Duplicate completion calls do not advance the date again.
+The update is transactional with the invoice status. This does not mark income
+as received or alter existing payment records. No historical dates are backfilled.
+
 Database SQL is recorded in invoice-due-date-send.sql and applied through the
 Supabase migration API. The local CLI was unavailable due to a configuration
 directory permission error. Regression tests never send real email.

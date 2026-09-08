@@ -4,7 +4,7 @@ import { getSession } from "@/lib/auth"
 import { accountAccess, upgradeResponse } from "@/lib/plan-access"
 import { db } from "@/lib/supabase"
 
-const validStatus = new Set(["draft", "sent", "paid", "overdue", "void"])
+const validStatus = new Set(["draft", "sent", "awaiting_payment", "paid", "overdue", "void"])
 const isoDate = (value: unknown, fallback: string | null) => {
   const date = String(value || "").trim()
   return /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : fallback

@@ -23,7 +23,7 @@ export async function deliverInvoice(id: string, owner: string, replyTo: string,
       reply_to: replyTo,
       subject: `Invoice ${invoice.invoice_number}`,
       text: `Hello ${invoice.client_name},\n\nPlease find your invoice ${invoice.invoice_number} attached as a PDF.${invoice.due_date ? ` Payment is due on ${invoice.due_date}.` : ""}\n\nThank you.`,
-      attachments: [{ filename, content: invoicePdf({ ...invoice, status: "sent" }).toString("base64") }],
+      attachments: [{ filename, content: invoicePdf({ ...invoice, status: "awaiting_payment" }).toString("base64") }],
     })
     let emailId = ""
     for (let attempt = 0; attempt < 3; attempt++) {
@@ -58,4 +58,3 @@ export async function deliverInvoice(id: string, owner: string, replyTo: string,
     throw error
   }
 }
-

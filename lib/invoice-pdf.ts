@@ -74,7 +74,8 @@ export function invoicePdf(invoice: Invoice) {
   const clientEmail = plain(invoice.client_email)
   const clientAddress = wrap(invoice.client_address, 48).slice(0, 4)
   const service = [...wrap(invoice.service_name || "Professional services", 44), ...wrap(invoice.description || "", 44)].slice(0, 16)
-  const status = ["draft", "sent", "paid", "overdue", "void"].includes(String(invoice.status || "").toLowerCase()) ? String(invoice.status).toUpperCase() : "DRAFT"
+  const rawStatus = String(invoice.status || "").toLowerCase()
+  const status = ["sent", "awaiting_payment"].includes(rawStatus) ? "AWAITING PAYMENT" : ["draft", "paid", "overdue", "void"].includes(rawStatus) ? rawStatus.toUpperCase() : "DRAFT"
   const total = money(invoice.amount, invoice.currency)
   const logo = jpegLogo(invoice.issuer_logo_data)
   const logoSize = logo ? fit(logo, 170, 64) : null
@@ -99,7 +100,7 @@ export function invoicePdf(invoice: Invoice) {
     rightText("INVOICE", 24, 553, 783, white, "F2"),
     rightText(`# ${displayNumber}`, 12, 553, 758, rgb("9AEAF5"), "F2"),
     rect(435, 715, 118, 25, status === "PAID" ? rgb("DDF8EF") : cyanSoft),
-    text(status, 9, 450, 724, status === "PAID" ? green : ink, "F2"),
+    text(status, status === "AWAITING PAYMENT" ? 8 : 9, 443, 724, status === "PAID" ? green : ink, "F2"),
     text("BILL TO", 9, 42, 660, cyan, "F2"),
     ...wrap(clientName, 30).slice(0, 2).map((value,index) => text(value, 15, 42, 637-index*18, ink, "F2")),
     ...(clientEmail ? [text(clientEmail, 9, 42, 592, muted)] : []),

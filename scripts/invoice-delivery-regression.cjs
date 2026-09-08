@@ -7,7 +7,7 @@ async function scenario({duplicate=false, failures=0, failComplete=false}={}) {
   const invoice={id:'test',invoice_number:'INV-TEST',client_name:'Test',client_email:'client@example.test',due_date:'2026-09-08',email_claim_token:'claim',issuer_logo_data:'test-logo'};
   const exports={};
   vm.runInNewContext(code,{exports,require(name){
-    if(name==='@/lib/invoice-pdf')return{invoicePdf(row){assert.equal(row.issuer_logo_data,'test-logo');return Buffer.from('%PDF-1.4 test')}};
+    if(name==='@/lib/invoice-pdf')return{invoicePdf(row){assert.equal(row.issuer_logo_data,'test-logo');assert.equal(row.status,'awaiting_payment');return Buffer.from('%PDF-1.4 test')}};
     if(name==='@/lib/supabase')return{async db(path,options){
       if(path==='rpc/orbit_claim_invoice_email'){if(claimed||duplicate)return[];claimed=true;return[invoice]}
       if(path==='rpc/orbit_complete_invoice_email'){completed++;if(failComplete)throw Error('DB unavailable');return[{...invoice,status:'sent'}]}
@@ -41,5 +41,10 @@ async function scenario({duplicate=false, failures=0, failComplete=false}={}) {
   const sql=fs.readFileSync('docs/invoice-due-date-send.sql','utf8');
   assert.ok(sql.includes("i.due_date=(now() at time zone 'UTC')::date"));
   assert.ok(sql.includes('from public,anon,authenticated'));
-  console.log('PASS: invoice PDF attachment, same-key retries, duplicate guard, uncertain-delivery hold, secured due-date cron');
+  const cycle=fs.readFileSync('docs/invoice-billing-cycle.sql','utf8');
+  assert.ok(cycle.includes("then 'awaiting_payment'"));
+  assert.ok(cycle.includes('c.charge_date=inv.due_date'));
+  assert.ok(cycle.includes('if inv.sent_at is not null'));
+  assert.ok(fs.readFileSync('components/invoice-workspace.tsx','utf8').includes('value="awaiting_payment"'));
+  console.log('PASS: awaiting-payment PDF, cycle completion guards, same-key retries, duplicate guard, uncertain-delivery hold, secured due-date cron');
 })().catch(error=>{console.error(error);process.exitCode=1});
