@@ -72,61 +72,62 @@ export function invoicePdf(invoice: Invoice) {
   const due = plain(String(invoice.due_date || "").slice(0, 10)) || "On receipt"
   const clientName = plain(invoice.client_name) || "Client"
   const clientEmail = plain(invoice.client_email)
-  const clientAddress = wrap(invoice.client_address, 48).slice(0, 2)
-  const service = wrap(invoice.service_name || "Professional services", 56).slice(0, 2)
+  const clientAddress = wrap(invoice.client_address, 48).slice(0, 4)
+  const service = wrap(invoice.service_name || "Professional services", 44).slice(0, 8)
   const status = ["draft", "sent", "paid", "overdue", "void"].includes(String(invoice.status || "").toLowerCase()) ? String(invoice.status).toUpperCase() : "DRAFT"
   const total = money(invoice.amount, invoice.currency)
   const logo = jpegLogo(invoice.issuer_logo_data)
-  const logoSize = logo ? fit(logo, 118, 44) : null
+  const logoSize = logo ? fit(logo, 170, 64) : null
+  const rightText = (value: string, size: number, right: number, y: number, color: string, font = "F1") => {
+    const safe = plain(value)
+    // Conservative fitting keeps long invoice references and totals within their columns.
+    const fittedSize = Math.min(size, 190 / Math.max(1, safe.length * 0.6))
+    return text(safe, fittedSize, right - safe.length * fittedSize * 0.56, y, color, font)
+  }
   const headerBrand = logo && logoSize
-    ? [
-        rect(48, 747, 136, 62, white),
-        `q ${logoSize.width} 0 0 ${logoSize.height} ${(48 + (136 - logoSize.width) / 2).toFixed(2)} ${(747 + (62 - logoSize.height) / 2).toFixed(2)} cm /Logo Do Q`,
-        
-      ]
-    : [
-        text(company.slice(0, 34), 24, 48, 782, white, "F2"),
-        text("BILLING STATEMENT", 8, 49, 765, rgb("92DCEC")),
-      ]
-
+    ? [rect(42, 720, 194, 88, white),
+       `q ${logoSize.width} 0 0 ${logoSize.height} ${42 + (194 - logoSize.width) / 2} ${720 + (88 - logoSize.height) / 2} cm /Logo Do Q`]
+    : wrap(company, 24).slice(0, 2).map((value, index) => text(value, 21, 42, 779 - index * 27, white, "F2"))
+  const tableTop = 482
+  const tableBottom = tableTop - Math.max(112, service.length * 17 + 58)
+  const summaryY = tableBottom - 103
   const commands = [
-    rect(0, 0, 595, 842, pale),
-    rect(0, 717, 595, 125, navy),
-    rect(0, 709, 595, 8, cyan),
+    rect(0, 0, 595, 842, white),
+    rect(0, 702, 595, 140, navy),
+    rect(0, 698, 595, 4, cyan),
     ...headerBrand,
-    text("INVOICE", 10, 426, 786, rgb("9AEAF5"), "F2"),
-    text(`# ${displayNumber}`, 15, 426, 764, white, "F2"),
-    rect(48, 650, 499, 43, white),
-    stroke(48, 650, 499, 43, line),
-    text("ISSUED", 8, 63, 675, muted, "F2"),
-    text(issued, 10, 63, 660, ink),
-    text("DUE DATE", 8, 242, 675, muted, "F2"),
-    text(due, 10, 242, 660, ink),
-    rect(451, 659, 78, 22, status === "PAID" ? rgb("DDF8EF") : cyanSoft),
-    text(status, 8, 463, 667, status === "PAID" ? green : cyan, "F2"),
-    text("BILL TO", 9, 48, 613, cyan, "F2"),
-    text(clientName, 16, 48, 588, ink, "F2"),
-    ...(clientEmail ? [text(clientEmail, 10, 48, 570, muted)] : []),
-    ...clientAddress.map((value, index) => text(value, 10, 48, 550 - index * 14, muted)),
-    text("SERVICE SUMMARY", 9, 48, 519, cyan, "F2"),
-    rect(48, 424, 499, 72, white),
-    stroke(48, 424, 499, 72, line),
-    text("DESCRIPTION", 8, 64, 474, muted, "F2"),
-    text("AMOUNT", 8, 455, 474, muted, "F2"),
-    ...service.map((value, index) => text(value, 12, 64, 452 - index * 15, ink, index === 0 ? "F2" : "F1")),
-    text(total, 15, 421, 446, ink, "F2"),
-    rect(48, 324, 240, 76, white),
-    stroke(48, 324, 240, 76, line),
-    text("PAYMENT DETAILS", 9, 64, 376, cyan, "F2"),
-    text(`Reference ${displayNumber} with your payment.`, 9, 64, 353, muted),
-    text(`Payment due ${due}.`, 9, 64, 336, muted),
-    rect(318, 344, 229, 56, navy),
-    text("TOTAL DUE", 9, 337, 378, rgb("9AEAF5"), "F2"),
-    text(total, 22, 337, 355, white, "F2"),
-    `${line} RG 0.7 w 48 114 m 547 114 l S`,
-    text(company.slice(0, 54), 9, 48, 88, ink, "F2"),
-    text("Thank you for your business.", 9, 48, 70, muted),
-    text(`Invoice ${displayNumber}`, 8, 460, 72, muted),
+    rightText("INVOICE", 24, 553, 783, white, "F2"),
+    rightText(`# ${displayNumber}`, 12, 553, 758, rgb("9AEAF5"), "F2"),
+    rect(435, 715, 118, 25, status === "PAID" ? rgb("DDF8EF") : cyanSoft),
+    text(status, 9, 450, 724, status === "PAID" ? green : ink, "F2"),
+    text("BILL TO", 9, 42, 660, cyan, "F2"),
+    ...wrap(clientName, 30).slice(0, 2).map((value,index) => text(value, 15, 42, 637-index*18, ink, "F2")),
+    ...(clientEmail ? [text(clientEmail, 9, 42, 592, muted)] : []),
+    ...clientAddress.map((value, index) => text(value, 9, 42, 575 - index * 13, muted)),
+    rect(363, 554, 190, 112, pale),
+    text("ISSUE DATE", 8, 379, 643, muted, "F2"),
+    text(issued, 11, 379, 626, ink),
+    text("DUE DATE", 8, 379, 602, muted, "F2"),
+    text(due, 11, 379, 585, ink, "F2"),
+    text("SERVICE DETAILS", 9, 42, 505, cyan, "F2"),
+    rect(42, tableBottom, 511, tableTop-tableBottom, pale),
+    rect(42, tableTop-32, 511, 32, navy),
+    text("DESCRIPTION", 9, 58, tableTop-21, white, "F2"),
+    rightText("AMOUNT", 9, 537, tableTop-21, white, "F2"),
+    ...service.map((value,index) => text(value, 11, 58, tableTop-58-index*17, ink)),
+    rightText(total, 13, 537, tableTop-58, ink, "F2"),
+    stroke(42, tableBottom, 511, tableTop-tableBottom, line),
+    text("PAYMENT REFERENCE", 8, 42, summaryY+61, muted, "F2"),
+    ...wrap(displayNumber, 34).map((value,index) => text(value, 10, 42, summaryY+42-index*14, ink)),
+    text("Please include this reference with your payment.", 8, 42, summaryY+10, muted),
+    rect(330, summaryY, 223, 80, navy),
+    rect(330, summaryY, 4, 80, cyan),
+    text("INVOICE TOTAL", 9, 349, summaryY+57, rgb("9AEAF5"), "F2"),
+    rightText(total, 24, 537, summaryY+23, white, "F2"),
+    `${line} RG 0.7 w 42 105 m 553 105 l S`,
+    text("Thank you for your business.", 12, 42, 80, ink, "F2"),
+    text(company.slice(0, 65), 9, 42, 61, muted),
+    rightText("1 / 1", 8, 553, 61, muted),
   ]
 
   const stream = commands.join("\n")
