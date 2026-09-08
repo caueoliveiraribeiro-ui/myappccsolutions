@@ -25,7 +25,7 @@ const SHOW_LOGIN_PLANS = true
 const LANDING_PLANS_URL = "/plans"
 const plans = [
   {name:"Personal",slug:"personal",usd:29.99,referenceUsd:39.99,eyebrow:"Build your foundation",icon:Target,description:"A beautiful command center for your money, investments and everyday life.",features:["Overview dashboard","Personal dashboard","Health & calorie tracking","Stocks","Expenses","Groceries","Calendar","Projects","Subscription management"],accent:"cyan",featured:false},
-  {name:"Small Business",slug:"small_business",usd:99.99,referenceUsd:149.99,eyebrow:"Turn momentum into growth",icon:Zap,description:"Connect your personal system to the work, clients and projects moving your business forward.",features:["Everything in Personal","Crypto","History","Reports","Lead management","Sales pipeline","100 live leads","50 archived leads","Up to 50 clients"],accent:"violet",featured:true},
+  {name:"Small Business",slug:"small_business",usd:99.99,referenceUsd:149.99,eyebrow:"Turn momentum into growth",icon:Zap,description:"Connect your personal system to the work, clients and projects moving your business forward.",features:["Everything in Personal","Crypto","History","Reports","Client management","Lead management","Sales pipeline","100 live leads","50 archived leads","Up to 50 clients"],accent:"violet",featured:true},
   {name:"Big Business",slug:"big_business",usd:189.99,referenceUsd:299.99,eyebrow:"Operate at full scale",icon:TrendingUp,description:"A complete growth workspace for teams ready to find, nurture and convert more opportunities.",features:["All Small Business features, with higher limits","Invoice system","Tasks & follow-ups","Sales pipeline","300 live leads","100 archived leads","Up to 100 clients"],accent:"blue",featured:false},
 ] as const
 
