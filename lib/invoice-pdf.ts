@@ -35,6 +35,33 @@ const rect = (x: number, y: number, width: number, height: number, color: string
 const stroke = (x: number, y: number, width: number, height: number, color: string) =>
   `${color} RG 0.7 w ${x} ${y} ${width} ${height} re S`
 
+type PdfImage = { bytes: Buffer; width: number; height: number }
+function jpegLogo(value: unknown): PdfImage | null {
+  const match = String(value || "").match(/^data:image\/jpeg;base64,([a-z0-9+/=\s]+)$/i)
+  if (!match) return null
+  const bytes = Buffer.from(match[1], "base64")
+  if (bytes.length < 10 || bytes[0] !== 0xff || bytes[1] !== 0xd8) return null
+  for (let offset = 2; offset + 8 < bytes.length;) {
+    if (bytes[offset] !== 0xff) { offset += 1; continue }
+    while (bytes[offset] === 0xff) offset += 1
+    const marker = bytes[offset++]
+    if (marker === 0xd8 || marker === 0xd9) continue
+    if (offset + 2 > bytes.length) return null
+    const length = bytes.readUInt16BE(offset)
+    if (length < 2 || offset + length > bytes.length) return null
+    if ([0xc0, 0xc1, 0xc2, 0xc3, 0xc5, 0xc6, 0xc7, 0xc9, 0xca, 0xcb, 0xcd, 0xce, 0xcf].includes(marker)) {
+      const height = bytes.readUInt16BE(offset + 3), width = bytes.readUInt16BE(offset + 5)
+      return width > 0 && height > 0 ? { bytes, width, height } : null
+    }
+    offset += length
+  }
+  return null
+}
+function fit(image: PdfImage, maxWidth: number, maxHeight: number) {
+  const scale = Math.min(maxWidth / image.width, maxHeight / image.height)
+  return { width: Number((image.width * scale).toFixed(2)), height: Number((image.height * scale).toFixed(2)) }
+}
+
 export function invoicePdf(invoice: Invoice) {
   const navy = rgb("07111F"), ink = rgb("102033"), muted = rgb("53677B"), cyan = rgb("12BDE0")
   const cyanSoft = rgb("DDF8FC"), pale = rgb("F5FAFC"), line = rgb("C6E9F0"), white = rgb("FFFFFF"), green = rgb("0D9F7D")
@@ -48,13 +75,24 @@ export function invoicePdf(invoice: Invoice) {
   const notes = wrap(invoice.notes || "Thank you for choosing Orbit LM.", 78).slice(0, 3)
   const status = ["draft", "sent", "paid", "overdue", "void"].includes(String(invoice.status || "").toLowerCase()) ? String(invoice.status).toUpperCase() : "DRAFT"
   const total = money(invoice.amount, invoice.currency)
+  const logo = jpegLogo(invoice.issuer_logo_data)
+  const logoSize = logo ? fit(logo, 118, 44) : null
+  const headerBrand = logo && logoSize
+    ? [
+        rect(48, 747, 136, 62, white),
+        `q ${logoSize.width} 0 0 ${logoSize.height} ${(48 + (136 - logoSize.width) / 2).toFixed(2)} ${(747 + (62 - logoSize.height) / 2).toFixed(2)} cm /Logo Do Q`,
+        text("INVOICE · VERIFIED BRAND", 8, 48, 732, rgb("92DCEC")),
+      ]
+    : [
+        text(company.slice(0, 34), 24, 48, 782, white, "F2"),
+        text(invoice.issuer_logo_data ? "INVOICE BRAND" : "CLIENT BILLING", 8, 49, 765, rgb("92DCEC")),
+      ]
 
   const commands = [
     rect(0, 0, 595, 842, pale),
     rect(0, 717, 595, 125, navy),
     rect(0, 709, 595, 8, cyan),
-    text(company.slice(0, 34), 24, 48, 782, white, "F2"),
-    text(invoice.issuer_logo_data ? "INVOICE · VERIFIED BRAND" : "CLIENT BILLING", 8, 49, 765, rgb("92DCEC")),
+    ...headerBrand,
     text("INVOICE", 10, 426, 786, rgb("9AEAF5"), "F2"),
     text(`# ${number}`, 15, 426, 764, white, "F2"),
     rect(48, 650, 499, 43, white),
@@ -87,18 +125,23 @@ export function invoicePdf(invoice: Invoice) {
   ]
 
   const stream = commands.join("\n")
-  const objects = [
-    "<< /Type /Catalog /Pages 2 0 R >>",
-    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
-    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> /Contents 4 0 R >>",
-    `<< /Length ${Buffer.byteLength(stream, "utf8")} >>\nstream\n${stream}\nendstream`,
-    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
-    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>",
+  const objects: Buffer[] = [
+    Buffer.from("<< /Type /Catalog /Pages 2 0 R >>"),
+    Buffer.from("<< /Type /Pages /Kids [3 0 R] /Count 1 >>"),
+    Buffer.from(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 5 0 R /F2 6 0 R >>${logo ? " /XObject << /Logo 7 0 R >>" : ""} >> /Contents 4 0 R >>`),
+    Buffer.from(`<< /Length ${Buffer.byteLength(stream, "utf8")} >>\nstream\n${stream}\nendstream`),
+    Buffer.from("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>"),
+    Buffer.from("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>"),
+    ...(logo ? [Buffer.concat([Buffer.from(`<< /Type /XObject /Subtype /Image /Width ${logo.width} /Height ${logo.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${logo.bytes.length} >>\nstream\n`), logo.bytes, Buffer.from("\nendstream")])] : []),
   ]
-  let pdf = "%PDF-1.4\n"
+  let pdf = Buffer.from("%PDF-1.4\n")
   const offsets = [0]
-  for (let index = 0; index < objects.length; index++) { offsets.push(Buffer.byteLength(pdf, "utf8")); pdf += `${index + 1} 0 obj\n${objects[index]}\nendobj\n` }
-  const xref = Buffer.byteLength(pdf, "utf8")
-  pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n${offsets.slice(1).map(offset => String(offset).padStart(10, "0") + " 00000 n ").join("\n")}\ntrailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`
-  return Buffer.from(pdf, "utf8")
+  for (let index = 0; index < objects.length; index++) {
+    offsets.push(pdf.length)
+    pdf = Buffer.concat([pdf, Buffer.from(`${index + 1} 0 obj\n`), objects[index], Buffer.from("\nendobj\n")])
+  }
+  const xref = pdf.length
+  const trailer = `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n${offsets.slice(1).map(offset => String(offset).padStart(10, "0") + " 00000 n ").join("\n")}\ntrailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`
+  return Buffer.concat([pdf, Buffer.from(trailer)])
+}
 }
