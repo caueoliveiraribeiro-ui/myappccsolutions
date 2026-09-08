@@ -1,49 +1,98 @@
 type Invoice = Record<string, unknown>
 
-const safe = (value: unknown) => String(value ?? "").replace(/[^\x20-\x7E]/g, " ").replace(/[\\()]/g, "\\$&").trim()
-const wrap = (value: unknown, width = 86) => {
-  const words = safe(value).split(/\s+/).filter(Boolean)
+const plain = (value: unknown) =>
+  String(value ?? "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[\r\n\t]+/g, " ")
+    .replace(/[^\x20-\x7E]/g, " ")
+    .replace(/[\\()]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+
+const wrap = (value: unknown, width: number) => {
+  const words = plain(value).split(" ").filter(Boolean)
   const lines: string[] = []
   let line = ""
   for (const word of words) {
-    if (`${line} ${word}`.trim().length > width) { if (line) lines.push(line); line = word } else line = `${line} ${word}`.trim()
+    const next = line ? `${line} ${word}` : word
+    if (next.length > width && line) { lines.push(line); line = word } else line = next
   }
   if (line) lines.push(line)
   return lines
 }
-const money = (amount: unknown, currency: unknown) => new Intl.NumberFormat("en-US", { style: "currency", currency: String(currency || "USD"), minimumFractionDigits: 2 }).format(Number(amount || 0))
+
+const money = (amount: unknown, currency: unknown) => {
+  const code = /^[A-Z]{3}$/.test(String(currency || "").toUpperCase()) ? String(currency).toUpperCase() : "USD"
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: code, minimumFractionDigits: 2 }).format(Number(amount || 0))
+}
+
+const rgb = (hex: string) => hex.match(/[A-Fa-f0-9]{2}/g)!.map(value => (parseInt(value, 16) / 255).toFixed(3)).join(" ")
+const text = (value: string, size: number, x: number, y: number, color: string, font = "F1") =>
+  `${color} rg BT /${font} ${size} Tf ${x} ${y} Td (${plain(value)}) Tj ET`
+const rect = (x: number, y: number, width: number, height: number, color: string) =>
+  `${color} rg ${x} ${y} ${width} ${height} re f`
+const stroke = (x: number, y: number, width: number, height: number, color: string) =>
+  `${color} RG 0.7 w ${x} ${y} ${width} ${height} re S`
 
 export function invoicePdf(invoice: Invoice) {
-  const lines = [
-    { text: "ORBIT LM", size: 24, color: "0.05 0.70 0.82" },
-    { text: "Life Management", size: 10, color: "0.35 0.42 0.50" },
-    { text: `INVOICE  ${safe(invoice.invoice_number)}`, size: 15, color: "0.08 0.12 0.20" },
-    { text: `Issued: ${safe(String(invoice.issue_date || "").slice(0, 10))}`, size: 10, color: "0.35 0.42 0.50" },
-    { text: `Due: ${safe(String(invoice.due_date || "On receipt").slice(0, 10) || "On receipt")}`, size: 10, color: "0.35 0.42 0.50" },
-    { text: "BILL TO", size: 10, color: "0.05 0.70 0.82" },
-    { text: safe(invoice.client_name), size: 13, color: "0.08 0.12 0.20" },
-    { text: safe(invoice.client_email), size: 10, color: "0.35 0.42 0.50" },
-    { text: "SERVICE", size: 10, color: "0.05 0.70 0.82" },
-    ...wrap(invoice.service_name || "Professional services").map(text => ({ text, size: 12, color: "0.08 0.12 0.20" })),
-    { text: `TOTAL DUE   ${money(invoice.amount, invoice.currency)}`, size: 17, color: "0.08 0.12 0.20" },
-    ...wrap(invoice.notes ? `Notes: ${invoice.notes}` : "").map(text => ({ text, size: 10, color: "0.35 0.42 0.50" })),
-    { text: "Thank you for choosing Orbit LM.", size: 10, color: "0.35 0.42 0.50" },
-  ].filter(line => line.text)
+  const navy = rgb("07111F"), ink = rgb("102033"), muted = rgb("53677B"), cyan = rgb("12BDE0")
+  const cyanSoft = rgb("DDF8FC"), pale = rgb("F5FAFC"), line = rgb("C6E9F0"), white = rgb("FFFFFF"), green = rgb("0D9F7D")
+  const number = plain(invoice.invoice_number) || "DRAFT"
+  const issued = plain(String(invoice.issue_date || "").slice(0, 10)) || "On creation"
+  const due = plain(String(invoice.due_date || "").slice(0, 10)) || "On receipt"
+  const clientName = plain(invoice.client_name) || "Client"
+  const clientEmail = plain(invoice.client_email)
+  const service = wrap(invoice.service_name || "Professional services", 56).slice(0, 2)
+  const notes = wrap(invoice.notes || "Thank you for choosing Orbit LM.", 78).slice(0, 3)
+  const status = ["draft", "sent", "paid", "overdue", "void"].includes(String(invoice.status || "").toLowerCase()) ? String(invoice.status).toUpperCase() : "DRAFT"
+  const total = money(invoice.amount, invoice.currency)
 
-  let y = 760
-  const commands = ["0.96 0.99 1 rg 0 0 612 792 re f", "0.05 0.70 0.82 RG 48 704 m 564 704 l S"]
-  for (const line of lines) {
-    y -= line.size > 16 ? 34 : 21
-    commands.push(`${line.color} rg BT /F1 ${line.size} Tf 48 ${y} Td (${safe(line.text)}) Tj ET`)
-    if (y < 70) break
-  }
+  const commands = [
+    rect(0, 0, 595, 842, pale),
+    rect(0, 717, 595, 125, navy),
+    rect(0, 709, 595, 8, cyan),
+    text("ORBIT LM", 26, 48, 782, white, "F2"),
+    text("LIFE MANAGEMENT", 8, 49, 765, rgb("92DCEC")),
+    text("INVOICE", 10, 426, 786, rgb("9AEAF5"), "F2"),
+    text(`# ${number}`, 15, 426, 764, white, "F2"),
+    rect(48, 650, 499, 43, white),
+    stroke(48, 650, 499, 43, line),
+    text("ISSUED", 8, 63, 675, muted, "F2"),
+    text(issued, 10, 63, 660, ink),
+    text("DUE DATE", 8, 242, 675, muted, "F2"),
+    text(due, 10, 242, 660, ink),
+    rect(451, 659, 78, 22, status === "PAID" ? rgb("DDF8EF") : cyanSoft),
+    text(status, 8, 463, 667, status === "PAID" ? green : cyan, "F2"),
+    text("BILL TO", 9, 48, 613, cyan, "F2"),
+    text(clientName, 16, 48, 588, ink, "F2"),
+    ...(clientEmail ? [text(clientEmail, 10, 48, 570, muted)] : []),
+    text("SERVICE SUMMARY", 9, 48, 519, cyan, "F2"),
+    rect(48, 424, 499, 72, white),
+    stroke(48, 424, 499, 72, line),
+    text("DESCRIPTION", 8, 64, 474, muted, "F2"),
+    text("AMOUNT", 8, 455, 474, muted, "F2"),
+    ...service.map((value, index) => text(value, 12, 64, 452 - index * 15, ink, index === 0 ? "F2" : "F1")),
+    text(total, 15, 421, 446, ink, "F2"),
+    rect(318, 344, 229, 56, navy),
+    text("TOTAL DUE", 9, 337, 378, rgb("9AEAF5"), "F2"),
+    text(total, 22, 337, 355, white, "F2"),
+    text("NOTES", 9, 48, 349, cyan, "F2"),
+    ...notes.map((value, index) => text(value, 10, 48, 326 - index * 16, muted)),
+    `${line} RG 0.7 w 48 114 m 547 114 l S`,
+    text("Orbit LM - Life Management", 9, 48, 88, ink, "F2"),
+    text("Thank you for your business.", 9, 48, 70, muted),
+    text(`Invoice ${number}`, 8, 460, 72, muted),
+  ]
+
   const stream = commands.join("\n")
   const objects = [
     "<< /Type /Catalog /Pages 2 0 R >>",
     "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
-    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>",
+    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> /Contents 4 0 R >>",
     `<< /Length ${Buffer.byteLength(stream, "utf8")} >>\nstream\n${stream}\nendstream`,
     "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>",
   ]
   let pdf = "%PDF-1.4\n"
   const offsets = [0]
