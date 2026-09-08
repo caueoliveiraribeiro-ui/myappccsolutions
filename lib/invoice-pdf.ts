@@ -71,6 +71,7 @@ export function invoicePdf(invoice: Invoice) {
   const due = plain(String(invoice.due_date || "").slice(0, 10)) || "On receipt"
   const clientName = plain(invoice.client_name) || "Client"
   const clientEmail = plain(invoice.client_email)
+  const clientAddress = wrap(invoice.client_address, 48).slice(0, 2)
   const service = wrap(invoice.service_name || "Professional services", 56).slice(0, 2)
   const notes = wrap(invoice.notes || "Thank you for choosing Orbit LM.", 78).slice(0, 3)
   const status = ["draft", "sent", "paid", "overdue", "void"].includes(String(invoice.status || "").toLowerCase()) ? String(invoice.status).toUpperCase() : "DRAFT"
@@ -106,6 +107,7 @@ export function invoicePdf(invoice: Invoice) {
     text("BILL TO", 9, 48, 613, cyan, "F2"),
     text(clientName, 16, 48, 588, ink, "F2"),
     ...(clientEmail ? [text(clientEmail, 10, 48, 570, muted)] : []),
+    ...clientAddress.map((value, index) => text(value, 10, 48, 550 - index * 14, muted)),
     text("SERVICE SUMMARY", 9, 48, 519, cyan, "F2"),
     rect(48, 424, 499, 72, white),
     stroke(48, 424, 499, 72, line),
