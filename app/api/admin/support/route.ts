@@ -5,6 +5,12 @@ import { ownerAccountIds } from "@/lib/plan-access"
 import { db } from "@/lib/supabase"
 import { addSupportMessage, listConversationMessages } from "@/lib/support-store"
 
+function sameOrigin(req: NextRequest) {
+  const origin = req.headers.get("origin")
+  if (!origin) return true
+  try { return new URL(origin).host === req.nextUrl.host } catch { return false }
+}
+
 async function owner() {
   const token = (await cookies()).get("orbit_session")?.value
   const user = token ? await getSession(token) : null
@@ -26,8 +32,9 @@ export async function GET(req: NextRequest) {
       const messages = await listConversationMessages(id)
       let member = null
       if (conversation.user_id) {
-        const users = await db(`app_users?id=eq.${encodeURIComponent(conversation.user_id)}&select=id,name,email&limit=1`)
-        member = users?.[0] || null
+        const users = await db(`app_users?id=eq.${encodeURIComponent(conversation.user_id)}&select=id,name,email,created_at&limit=1`)
+        const subscriptions = await db(`account_subscriptions?user_id=eq.${encodeURIComponent(conversation.user_id)}&select=plan,status,access_until,updated_at&limit=1`)
+        member = users?.[0] ? { ...users[0], subscription: subscriptions?.[0] || null } : null
       }
       return NextResponse.json({ conversation, member, messages }, { headers: { "Cache-Control": "no-store" } })
     }
@@ -39,8 +46,10 @@ export async function GET(req: NextRequest) {
     const conversations = (await db(`support_conversations?select=*&order=last_message_at.desc&limit=100${filter}`)) || []
     const userIds = [...new Set(conversations.map((row: any) => row.user_id).filter(Boolean))]
     let users: any[] = []
-    if (userIds.length) users = (await db(`app_users?id=in.(${userIds.join(",")})&select=id,name,email`)) || []
-    const userMap = new Map(users.map((user: any) => [user.id, user]))
+    if (userIds.length) users = (await db(`app_users?id=in.(${userIds.join(",")})&select=id,name,email,created_at`)) || []
+    const subscriptions = userIds.length ? ((await db(`account_subscriptions?user_id=in.(${userIds.join(",")})&select=user_id,plan,status,access_until,updated_at`)) || []) : []
+    const subscriptionMap = new Map(subscriptions.map((subscription: any) => [subscription.user_id, subscription]))
+    const userMap = new Map(users.map((user: any) => [user.id, { ...user, subscription: subscriptionMap.get(user.id) || null }]))
     const rows = conversations.map((conversation: any) => ({
       ...conversation,
       member: conversation.user_id ? userMap.get(conversation.user_id) || null : null,
@@ -59,6 +68,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  if (!sameOrigin(req)) return NextResponse.json({ error: "Invalid origin." }, { status: 403 })
   const admin = await owner()
   if (!admin) return NextResponse.json({ error: "Owner access required." }, { status: 403 })
 
@@ -87,6 +97,7 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
+  if (!sameOrigin(req)) return NextResponse.json({ error: "Invalid origin." }, { status: 403 })
   if (!(await owner())) return NextResponse.json({ error: "Owner access required." }, { status: 403 })
 
   let body: unknown
@@ -107,5 +118,24 @@ export async function PATCH(req: NextRequest) {
   } catch (error) {
     console.error("ORBIT_ADMIN_SUPPORT_STATUS_FAILED", error)
     return NextResponse.json({ error: "Could not update conversation." }, { status: 503 })
+  }
+}
+
+export async function DELETE(req: NextRequest) {
+  if (!sameOrigin(req)) return NextResponse.json({ error: "Invalid origin." }, { status: 403 })
+  if (!(await owner())) return NextResponse.json({ error: "Owner access required." }, { status: 403 })
+
+  let body: unknown
+  try { body = await req.json() } catch { return NextResponse.json({ error: "Invalid request." }, { status: 400 }) }
+  const data = body && typeof body === "object" ? body as Record<string, unknown> : {}
+  const conversationId = typeof data.conversationId === "string" ? data.conversationId : ""
+  if (!uuidPattern.test(conversationId)) return NextResponse.json({ error: "Invalid conversation." }, { status: 400 })
+
+  try {
+    await db(`support_conversations?id=eq.${encodeURIComponent(conversationId)}`, { method: "DELETE" })
+    return NextResponse.json({ ok: true })
+  } catch (error) {
+    console.error("ORBIT_ADMIN_SUPPORT_DELETE_FAILED", error)
+    return NextResponse.json({ error: "Could not delete this conversation." }, { status: 503 })
   }
 }
