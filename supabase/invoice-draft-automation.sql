@@ -1,5 +1,5 @@
 -- Daily automatic invoice drafts
--- Creates one draft per eligible client exactly two days before their charge date.
+-- Creates one draft per eligible Big Business / owner client exactly two days before their charge date.
 -- The production scheduler calls this function using the service role only.
 create or replace function public.orbit_create_all_invoice_drafts()
 returns integer
@@ -12,12 +12,23 @@ declare
   created_count integer := 0;
 begin
   for owner_id in
-    select distinct user_id
-    from public.clients
-    where coalesce(archived, false) = false
-      and charge_date = current_date + 2
-      and coalesce(service_amount, 0) > 0
-      and email ~ '^[^@[:space:]]+@[^@[:space:]]+\\.[^@[:space:]]+$'
+    select distinct c.user_id
+    from public.clients c
+    where coalesce(c.archived, false) = false
+      and c.charge_date = current_date + 2
+      and coalesce(c.service_amount, 0) > 0
+      and c.email ~ '^[^@[:space:]]+@[^@[:space:]]+\\.[^@[:space:]]+$'
+      and (
+        c.user_id in ('00000000-0000-4000-8000-000000000001'::uuid, 'c38a52ed-766f-47b1-abbd-bc8e152dcaa9'::uuid)
+        or exists (
+          select 1
+          from public.account_subscriptions s
+          where s.user_id = c.user_id
+            and s.plan = 'big_business'
+            and s.status = 'active'
+            and s.access_until > now()
+        )
+      )
   loop
     created_count := created_count + public.orbit_create_invoice_drafts(owner_id);
   end loop;
