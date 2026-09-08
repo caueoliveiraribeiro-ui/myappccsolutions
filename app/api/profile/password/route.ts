@@ -42,7 +42,7 @@ export async function POST(request: Request) {
     const next = hashUserPassword(newPassword)
     await db(`app_users?id=eq.${encodeURIComponent(user.id)}`, {
       method: "PATCH",
-      body: JSON.stringify({ password_salt: next.salt, password_hash: next.hash, updated_at: new Date().toISOString() }),
+      body: JSON.stringify({ password_salt: next.salt, password_hash: next.hash }),
     })
     return NextResponse.json({ ok: true })
   } catch (error) {
