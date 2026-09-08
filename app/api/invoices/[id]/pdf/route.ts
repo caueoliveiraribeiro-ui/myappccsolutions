@@ -10,7 +10,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
   const user = token ? await getSession(token) : null
   if (!user) return NextResponse.json({ error: "Please sign in again." }, { status: 401 })
   const access = await accountAccess(user.id)
-  if (!access.features.includes("reports")) return upgradeResponse()
+  if (!access.features.includes("invoices")) return upgradeResponse()
   const { id } = await params
   const invoices = await db(`invoices?id=eq.${encodeURIComponent(id)}&user_id=eq.${encodeURIComponent(user.id)}&select=*&limit=1`)
   const invoice = invoices?.[0]
