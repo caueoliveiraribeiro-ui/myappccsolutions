@@ -1,6 +1,6 @@
 "use client"
 
-import { FormEvent, useMemo, useState } from "react"
+import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react"
 import { CalendarDays, CheckCircle2, FileText, Mail, Plus, Printer, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -23,15 +23,19 @@ export function InvoiceWorkspace({ invoices = [], clients = [], projects = [], c
   const [selectedClient, setSelectedClient] = useState("")
   const [sending, setSending] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
+  const [brand, setBrand] = useState({ company_name: "", logo_data_url: "" })
+  const [savingBrand, setSavingBrand] = useState(false)
+  useEffect(() => { fetch("/api/invoice-branding").then(r => r.ok ? r.json() : {}).then(d => d.branding && setBrand({ company_name: d.branding.company_name || "", logo_data_url: d.branding.logo_data_url || "" })).catch(() => {}) }, [])
   const nextNumber = useMemo(() => `ORB-${new Date().getFullYear()}-${String(invoices.length + 1).padStart(4, "0")}`, [invoices.length])
   const client = clients.find((item: Row) => item.id === selectedClient)
 
   async function createInvoice(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    const form = event.currentTarget
     if (creating) return
     setCreating(true)
     try {
-      const values = Object.fromEntries(new FormData(event.currentTarget))
+      const values = Object.fromEntries(new FormData(form))
       const response = await fetch("/api/invoices", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -40,7 +44,7 @@ export function InvoiceWorkspace({ invoices = [], clients = [], projects = [], c
       const data = await response.json().catch(() => ({}))
       if (!response.ok || !data.invoice?.id) throw new Error(data.error || "We could not create this invoice.")
       await onCreated?.(data.invoice)
-      event.currentTarget.reset()
+      form.reset()
       setSelectedClient("")
       toast.success(`Invoice ${data.invoice.invoice_number} is ready.`)
     } catch (error) {
@@ -48,6 +52,25 @@ export function InvoiceWorkspace({ invoices = [], clients = [], projects = [], c
     } finally {
       setCreating(false)
     }
+  }
+
+  async function saveBrand() {
+    setSavingBrand(true)
+    try {
+      const response = await fetch("/api/invoice-branding", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(brand) })
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(data.error || "We could not save your invoice brand.")
+      setBrand({ company_name: data.branding.company_name || "", logo_data_url: data.branding.logo_data_url || "" })
+      toast.success("Invoice brand saved.")
+    } catch (error) { toast.error(error instanceof Error ? error.message : "We could not save your invoice brand.") } finally { setSavingBrand(false) }
+  }
+  function pickLogo(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]
+    if (!file) return
+    if (!file.type.startsWith("image/") || file.size > 700000) { toast.error("Choose a JPG, PNG, or WebP logo smaller than 700 KB."); return }
+    const reader = new FileReader()
+    reader.onload = () => setBrand(current => ({ ...current, logo_data_url: String(reader.result || "") }))
+    reader.readAsDataURL(file)
   }
 
   async function sendInvoice(invoice: Row) {
@@ -97,6 +120,8 @@ export function InvoiceWorkspace({ invoices = [], clients = [], projects = [], c
         </form>
       </details>
     </Card>
+
+    <Card className="border-cyan-300/20 bg-white/[.035] p-5 text-white sm:p-6"><div className="flex flex-wrap items-end justify-between gap-4"><div><h2 className="font-semibold">Your invoice brand</h2><p className="mt-1 text-sm text-slate-400">This logo is used on every invoice you create and every scheduled draft.</p></div>{brand.logo_data_url ? <img src={brand.logo_data_url} alt="Invoice logo preview" className="h-12 max-w-32 rounded-xl border border-cyan-300/25 bg-white object-contain p-1"/> : <span className="grid h-12 w-12 place-items-center rounded-xl border border-dashed border-cyan-300/25 text-cyan-200"><FileText size={19}/></span>}</div><div className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto_auto]"><Input value={brand.company_name} onChange={e=>setBrand(current=>({...current,company_name:e.target.value}))} placeholder="Your company name" className="h-11"/><Input type="file" accept="image/png,image/jpeg,image/webp" onChange={pickLogo} className="h-11 max-w-full"/><Button type="button" disabled={savingBrand} onClick={saveBrand} className="bg-cyan-300 text-slate-950">{savingBrand?"Saving…":"Save brand"}</Button></div></Card>
 
     <Card className="border-white/10 bg-white/[.035] p-5 text-white sm:p-6"><div className="mb-5 flex flex-wrap items-end justify-between gap-3"><div><h2 className="font-semibold">Invoice workspace</h2><p className="mt-1 text-sm text-slate-400">Every saved invoice stays editable, downloadable, and ready to send.</p></div><span className="rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-1 text-xs text-cyan-100">{invoices.length} saved</span></div>
       <div className="space-y-3">{invoices.length === 0 && <div className="rounded-2xl border border-dashed border-cyan-300/20 bg-cyan-300/[.035] p-8 text-center text-sm text-slate-400">Your first branded invoice will appear here after you create it.</div>}
