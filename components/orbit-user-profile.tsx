@@ -37,13 +37,18 @@ export function OrbitUserProfile() {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [saving, setSaving] = useState(false)
   const [passwordBusy, setPasswordBusy] = useState(false)
+  const [selectedCountry, setSelectedCountry] = useState("US")
+  const [selectedCurrency, setSelectedCurrency] = useState("USD")
   const triggerRef = useRef<HTMLElement | null>(null)
   const triggerCleanup = useRef<(() => void) | null>(null)
 
   async function load() {
     const r = await fetch("/api/me", { cache: "no-store" })
     if (!r.ok) return
-    setProfile(await r.json())
+    const next = await r.json()
+    setProfile(next)
+    setSelectedCountry(next.country || "US")
+    setSelectedCurrency(next.currency || "USD")
   }
 
   function syncSidebar(next: Profile) {
@@ -59,8 +64,6 @@ export function OrbitUserProfile() {
   }
 
   function refreshDashboardProfile() {
-    // Notify both the preference synchronizer and the existing dashboard
-    // /api/me refresh path after a successful profile write.
     window.dispatchEvent(new CustomEvent("orbit:profile-updated"))
     window.dispatchEvent(new Event("focus"))
   }
@@ -169,6 +172,8 @@ export function OrbitUserProfile() {
       const { partial, missing_fields, ...savedProfile } = d
       const next = { ...profile, ...savedProfile }
       setProfile(next)
+      setSelectedCountry(next.country || selectedCountry)
+      setSelectedCurrency(next.currency || selectedCurrency)
       syncSidebar(next)
       refreshDashboardProfile()
 
@@ -254,9 +259,9 @@ export function OrbitUserProfile() {
                 <Field label="City" name="city" defaultValue={profile?.city}/>
                 <Field label="State / region" name="region" defaultValue={profile?.region}/>
                 <Field label="Postal code" name="postal_code" defaultValue={profile?.postal_code}/>
-                <label className="text-xs text-slate-400">Country<select name="country" defaultValue={profile?.country || "US"} className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#091522] px-3 text-sm">{countries.map(([code,label])=><option key={code} value={code}>{label}</option>)}</select></label>
+                <label className="text-xs text-slate-400">Country<select name="country" value={selectedCountry} onChange={(event) => setSelectedCountry(event.target.value)} className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#091522] px-3 text-sm">{countries.map(([code,label])=><option key={code} value={code}>{label}</option>)}</select></label>
                 <label className="text-xs text-slate-400">Language<select name="language" defaultValue={profile?.language || "en"} className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#091522] px-3 text-sm">{languages.map(([code,label])=><option key={code} value={code}>{label}</option>)}</select></label>
-                <label className="text-xs text-slate-400">Default currency<select name="currency" defaultValue={profile?.currency || "USD"} className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#091522] px-3 text-sm">{currencies.map((code)=><option key={code}>{code}</option>)}</select></label>
+                <label className="text-xs text-slate-400">Default currency<select name="currency" value={selectedCurrency} onChange={(event) => setSelectedCurrency(event.target.value)} className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#091522] px-3 text-sm">{currencies.map((code)=><option key={code}>{code}</option>)}</select></label>
                 <Field label="Time zone" name="timezone" defaultValue={profile?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone} placeholder="America/Sao_Paulo"/>
                 <details className="group rounded-xl border border-white/10 bg-[#091522] text-xs text-slate-300 open:border-cyan-300/30">
                   <summary className="flex h-10 cursor-pointer list-none items-center justify-between px-3 font-medium text-slate-300">
@@ -264,12 +269,24 @@ export function OrbitUserProfile() {
                     <span className="text-cyan-300 transition group-open:rotate-180">⌄</span>
                   </summary>
                   <div className="max-h-48 space-y-1 overflow-y-auto border-t border-white/[.07] p-2">
-                    {availableMarkets.map((market) => (
-                      <div key={market.code} className="flex items-center justify-between gap-3 rounded-lg bg-black/20 px-2.5 py-2">
-                        <span className="min-w-0 truncate">{market.flag} {market.name}</span>
-                        <span className="shrink-0 font-medium text-cyan-100">{market.currency}</span>
-                      </div>
-                    ))}
+                    {availableMarkets.map((market) => {
+                      const selected = market.code === selectedCountry && market.currency === selectedCurrency
+                      return (
+                        <button
+                          key={market.code}
+                          type="button"
+                          aria-pressed={selected}
+                          onClick={() => {
+                            setSelectedCountry(market.code)
+                            setSelectedCurrency(market.currency)
+                          }}
+                          className={`flex w-full items-center justify-between gap-3 rounded-lg border px-2.5 py-2 text-left transition ${selected ? "border-cyan-300/50 bg-cyan-300/[.12] text-white" : "border-transparent bg-black/20 text-slate-300 hover:border-white/10 hover:bg-white/[.06]"}`}
+                        >
+                          <span className="min-w-0 truncate">{market.flag} {market.name}</span>
+                          <span className={`shrink-0 font-medium ${selected ? "text-cyan-200" : "text-cyan-100"}`}>{market.currency}{selected ? " ✓" : ""}</span>
+                        </button>
+                      )
+                    })}
                   </div>
                 </details>
               </div>
@@ -296,7 +313,7 @@ export function OrbitUserProfile() {
                 <Info label="Account ID" value={profile?.id || "—"}/>
                 <Info label="Plan" value={profile?.access?.plan ? String(profile.access.plan).replaceAll("_", " ") : "No plan"}/>
                 <Info label="Access status" value={profile?.access?.status || "—"}/>
-                <Info label="Currency" value={profile?.currency || "USD"}/>
+                <Info label="Currency" value={selectedCurrency || profile?.currency || "USD"}/>
               </div>
             </section>
           </div>
