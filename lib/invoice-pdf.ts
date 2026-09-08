@@ -67,13 +67,13 @@ export function invoicePdf(invoice: Invoice) {
   const cyanSoft = rgb("DDF8FC"), pale = rgb("F5FAFC"), line = rgb("C6E9F0"), white = rgb("FFFFFF"), green = rgb("0D9F7D")
   const company = plain(invoice.issuer_company_name) || plain(invoice.client_company_name) || plain(invoice.client_name) || "YOUR COMPANY"
   const number = plain(invoice.invoice_number) || "DRAFT"
+  const displayNumber = number.replace(/^ORB-/i, "INV-")
   const issued = plain(String(invoice.issue_date || "").slice(0, 10)) || "On creation"
   const due = plain(String(invoice.due_date || "").slice(0, 10)) || "On receipt"
   const clientName = plain(invoice.client_name) || "Client"
   const clientEmail = plain(invoice.client_email)
   const clientAddress = wrap(invoice.client_address, 48).slice(0, 2)
   const service = wrap(invoice.service_name || "Professional services", 56).slice(0, 2)
-  const notes = wrap(invoice.notes || "Thank you for choosing Orbit LM.", 78).slice(0, 3)
   const status = ["draft", "sent", "paid", "overdue", "void"].includes(String(invoice.status || "").toLowerCase()) ? String(invoice.status).toUpperCase() : "DRAFT"
   const total = money(invoice.amount, invoice.currency)
   const logo = jpegLogo(invoice.issuer_logo_data)
@@ -82,11 +82,11 @@ export function invoicePdf(invoice: Invoice) {
     ? [
         rect(48, 747, 136, 62, white),
         `q ${logoSize.width} 0 0 ${logoSize.height} ${(48 + (136 - logoSize.width) / 2).toFixed(2)} ${(747 + (62 - logoSize.height) / 2).toFixed(2)} cm /Logo Do Q`,
-        text("INVOICE · VERIFIED BRAND", 8, 48, 732, rgb("92DCEC")),
+        
       ]
     : [
         text(company.slice(0, 34), 24, 48, 782, white, "F2"),
-        text(invoice.issuer_logo_data ? "INVOICE BRAND" : "CLIENT BILLING", 8, 49, 765, rgb("92DCEC")),
+        text("BILLING STATEMENT", 8, 49, 765, rgb("92DCEC")),
       ]
 
   const commands = [
@@ -95,7 +95,7 @@ export function invoicePdf(invoice: Invoice) {
     rect(0, 709, 595, 8, cyan),
     ...headerBrand,
     text("INVOICE", 10, 426, 786, rgb("9AEAF5"), "F2"),
-    text(`# ${number}`, 15, 426, 764, white, "F2"),
+    text(`# ${displayNumber}`, 15, 426, 764, white, "F2"),
     rect(48, 650, 499, 43, white),
     stroke(48, 650, 499, 43, line),
     text("ISSUED", 8, 63, 675, muted, "F2"),
@@ -115,15 +115,18 @@ export function invoicePdf(invoice: Invoice) {
     text("AMOUNT", 8, 455, 474, muted, "F2"),
     ...service.map((value, index) => text(value, 12, 64, 452 - index * 15, ink, index === 0 ? "F2" : "F1")),
     text(total, 15, 421, 446, ink, "F2"),
+    rect(48, 324, 240, 76, white),
+    stroke(48, 324, 240, 76, line),
+    text("PAYMENT DETAILS", 9, 64, 376, cyan, "F2"),
+    text(`Reference ${displayNumber} with your payment.`, 9, 64, 353, muted),
+    text(`Payment due ${due}.`, 9, 64, 336, muted),
     rect(318, 344, 229, 56, navy),
     text("TOTAL DUE", 9, 337, 378, rgb("9AEAF5"), "F2"),
     text(total, 22, 337, 355, white, "F2"),
-    text("NOTES", 9, 48, 349, cyan, "F2"),
-    ...notes.map((value, index) => text(value, 10, 48, 326 - index * 16, muted)),
     `${line} RG 0.7 w 48 114 m 547 114 l S`,
     text(company.slice(0, 54), 9, 48, 88, ink, "F2"),
     text("Thank you for your business.", 9, 48, 70, muted),
-    text(`Invoice ${number}`, 8, 460, 72, muted),
+    text(`Invoice ${displayNumber}`, 8, 460, 72, muted),
   ]
 
   const stream = commands.join("\n")
