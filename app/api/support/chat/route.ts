@@ -22,6 +22,7 @@ export async function POST(req: NextRequest) {
 
   const token = (await cookies()).get("orbit_session")?.value
   const user = token ? await getSession(token) : null
+  if (!user) return NextResponse.json({ error: "Please sign in before sending a message to Orbit Support. This keeps your conversation private and lets our team reply in your inbox." }, { status: 401 })
 
   const length = Number(req.headers.get("content-length") || 0)
   if (length > MAX_BODY_BYTES) return NextResponse.json({ error: "Request too large" }, { status: 413 })
@@ -55,25 +56,22 @@ export async function POST(req: NextRequest) {
     const result = await answerOrbitSupport(message, context)
     let conversationId: string | null = null
 
-    if (user) {
-      try {
-        const conversation = await getOrCreateOpenConversation(user.id, message.slice(0, 80))
-        if (conversation?.id) {
-          conversationId = conversation.id
-          await addSupportMessage(conversation.id, "user", message)
-          await addSupportMessage(conversation.id, "orbit_ai", result.reply)
-          if (result.needsHuman) await markHumanRequested(conversation.id)
-        }
-      } catch (persistError) {
-        console.error("ORBIT_SUPPORT_PERSIST_FAILED", persistError)
-        return NextResponse.json({
-          error: "Your message could not be saved for the Orbit support team. Please try again in a moment.",
-        }, { status: 503 })
-      }
+    try {
+      const conversation = await getOrCreateOpenConversation(user.id, message.slice(0, 80))
+      if (!conversation?.id) throw new Error("Support conversation could not be created.")
+      conversationId = conversation.id
+      await addSupportMessage(conversation.id, "user", message)
+      await addSupportMessage(conversation.id, "orbit_ai", result.reply)
+      if (result.needsHuman) await markHumanRequested(conversation.id)
+    } catch (persistError) {
+      console.error("ORBIT_SUPPORT_PERSIST_FAILED", persistError)
+      return NextResponse.json({
+        error: "Your message could not be saved for the Orbit support team. Please try again in a moment.",
+      }, { status: 503 })
     }
 
     return NextResponse.json(
-      { ...result, authenticated: Boolean(user), conversationId },
+      { ...result, authenticated: true, conversationId },
       { headers: { "Cache-Control": "no-store" } },
     )
   } catch (error) {

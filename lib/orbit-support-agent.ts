@@ -64,6 +64,22 @@ export async function answerOrbitSupport(
     }
   }
 
+  if (/health|calorie|food|meal|nutrition/.test(text)) {
+    return {
+      mode: "knowledge",
+      reply: "Open Personal, then Health, to record what you ate. Choose an item from the food list, enter the grams you consumed, and Orbit adds its calories to today’s total and to your monthly personal history. Health tracking is for organization only, not medical advice.",
+      suggestions: ["How do I use Expenses?", "How do I use Investments?"],
+    }
+  }
+
+  if (/invoice|receipt|pdf/.test(text)) {
+    return {
+      mode: "knowledge",
+      reply: "Invoices are being added to Orbit’s business workflow. They will use the client or project information you already saved, so you will not need to retype the basics. For now, keep the client name, email, service, amount and charge date up to date in Clients or Projects.",
+      suggestions: ["How do Projects work?", "Billing & plans"],
+    }
+  }
+
   if (/gmail|email send|send email|mail/.test(text)) {
     return {
       mode: "knowledge",
@@ -100,12 +116,12 @@ export async function answerOrbitSupport(
     }
   }
 
-  if (/finance|expense|money|stock|crypto|investment|report/.test(text)) {
+  if (/finance|expense|money|stock|crypto|investment|report|currency|conversion/.test(text)) {
     return {
       mode: "knowledge",
       reply:
-        "Orbit brings financial organization, expenses, supported investment views and reports into the same workspace. Availability depends on your plan. For privacy, describe the feature you need help with rather than pasting bank credentials, complete account numbers or other sensitive financial information.",
-      suggestions: ["Why is a feature locked?", "Billing & plans"],
+        "Use Personal for expenses and groceries, Investments for stock, crypto and savings tracking, and Reports for payment and financial summaries. Your selected default currency drives Orbit’s display conversion. If a number looks wrong, tell me the tab, ticker or record, selected currency and what you expected — never send account or card details.",
+      suggestions: ["How do I use Investments?", "How do Reports work?"],
     }
   }
 
@@ -131,7 +147,8 @@ export async function answerOrbitSupport(
   return {
     mode: "knowledge",
     reply:
-      "I can help you with Orbit features, account access, plans and billing, Google Calendar, Gmail, clients, leads, pipeline, projects, tasks, finances, investments, reports, and Invite & Sharing. Tell me what you’re trying to do and I’ll point you in the right direction.",
-    suggestions: ["How do I use Orbit?", "Billing & plans", "Report a problem"],
+      "I can guide you through the exact Orbit area you need: Personal (health, groceries and expenses), Investments (stocks, crypto and savings), Clients, Leads, Pipeline, Projects, Tasks, Calendar, Reports, invoices, plans and sharing. Tell me the page you are on and the result you want, and I’ll give you the next steps.",
+    suggestions: ["How do I use Personal?", "How do I use Investments?", "Report a problem"],
   }
 }
+
