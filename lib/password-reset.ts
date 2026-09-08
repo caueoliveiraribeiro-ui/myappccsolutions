@@ -2,15 +2,11 @@ import { createHmac, randomBytes } from "node:crypto"
 import { db } from "@/lib/supabase"
 import { tokenHash } from "@/lib/password-tokens"
 import { APP_ORIGIN } from "@/lib/registration"
-
-const OWNER_IDS = new Set([
-  "00000000-0000-4000-8000-000000000001",
-  "c38a52ed-766f-47b1-abbd-bc8e152dcaa9",
-])
+import { OWNER_ID } from "@/lib/auth"
 
 export type ResetIssueResult =
   | { ok: true; email: string; resendId?: string }
-  | { ok: false; code: "not_found" | "protected" | "not_configured" | "rate_limited" | "email_failed" | "database_failed"; detail?: string }
+  | { ok: false; code: "not_found" | "not_configured" | "rate_limited" | "email_failed" | "database_failed"; detail?: string }
 
 export function validEmail(email: string) {
   return email.length <= 254 && /^\S+@\S+\.\S+$/.test(email)
@@ -70,6 +66,27 @@ export async function resendEmailStatus(emailId: string) {
   }
 }
 
+async function sendResetEmail(email: string, userId: string, token: string, hashedToken: string) {
+  const resendKey = process.env.RESEND_API_KEY!
+  const from = process.env.RESEND_FROM_EMAIL!
+
+  return fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${resendKey}`,
+      "Content-Type": "application/json",
+      "Idempotency-Key": `orbit-password-reset-${userId}-${hashedToken.slice(0, 16)}`,
+    },
+    signal: AbortSignal.timeout(15000),
+    body: JSON.stringify({
+      from,
+      to: [email],
+      subject: "Reset your Orbit LM password",
+      text: `We received a request to reset your Orbit LM password.\n\nUse this one-time link:\n${APP_ORIGIN}/reset-password?token=${token}\n\nThis link expires in 30 minutes and can only be used once. If you did not request this, you can ignore this email.`,
+    }),
+  })
+}
+
 export async function issuePasswordReset(emailInput: string, options?: { publicIp?: string; bypassPublicRate?: boolean }): Promise<ResetIssueResult> {
   const email = emailInput.trim().toLowerCase()
   if (!validEmail(email)) return { ok: false, code: "not_found" }
@@ -102,21 +119,23 @@ export async function issuePasswordReset(emailInput: string, options?: { publicI
   }
 
   const user = users?.[0] as { id?: string; email?: string } | undefined
-  if (!user?.id) return { ok: false, code: "not_found" }
-  if (OWNER_IDS.has(user.id) || email === process.env.ADMIN_EMAIL?.trim().toLowerCase()) {
-    return { ok: false, code: "protected" }
-  }
+  const adminEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase()
+  const isPrimaryOwner = !user?.id && Boolean(adminEmail) && email === adminEmail
+
+  if (!user?.id && !isPrimaryOwner) return { ok: false, code: "not_found" }
 
   const token = randomBytes(32).toString("hex")
   const hashedToken = tokenHash(token)
   const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString()
+  const targetId = isPrimaryOwner ? OWNER_ID : user!.id!
+  const tokenTable = isPrimaryOwner ? "orbit_owner_password_reset_tokens" : "orbit_password_setup_tokens"
 
   try {
-    await db("orbit_password_setup_tokens?on_conflict=user_id", {
+    await db(`${tokenTable}?on_conflict=user_id`, {
       method: "POST",
       headers: { Prefer: "resolution=merge-duplicates,return=representation" },
       body: JSON.stringify({
-        user_id: user.id,
+        user_id: targetId,
         token_hash: hashedToken,
         expires_at: expiresAt,
         created_at: new Date().toISOString(),
@@ -126,25 +145,17 @@ export async function issuePasswordReset(emailInput: string, options?: { publicI
     return { ok: false, code: "database_failed", detail: error instanceof Error ? error.message : String(error) }
   }
 
-  const response = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${resendKey}`,
-      "Content-Type": "application/json",
-      "Idempotency-Key": `orbit-password-reset-${user.id}-${hashedToken.slice(0, 16)}`,
-    },
-    signal: AbortSignal.timeout(15000),
-    body: JSON.stringify({
-      from,
-      to: [email],
-      subject: "Reset your Orbit LM password",
-      text: `We received a request to reset your Orbit LM password.\n\nUse this one-time link:\n${APP_ORIGIN}/reset-password?token=${token}\n\nThis link expires in 30 minutes and can only be used once. If you did not request this, you can ignore this email.`,
-    }),
-  })
+  let response: Response
+  try {
+    response = await sendResetEmail(email, targetId, token, hashedToken)
+  } catch (error) {
+    await db(`${tokenTable}?token_hash=eq.${encodeURIComponent(hashedToken)}`, { method: "DELETE" }).catch(() => {})
+    return { ok: false, code: "email_failed", detail: error instanceof Error ? error.message : String(error) }
+  }
 
   if (!response.ok) {
     const detail = await response.text()
-    await db(`orbit_password_setup_tokens?token_hash=eq.${encodeURIComponent(hashedToken)}`, { method: "DELETE" }).catch(() => {})
+    await db(`${tokenTable}?token_hash=eq.${encodeURIComponent(hashedToken)}`, { method: "DELETE" }).catch(() => {})
     return { ok: false, code: "email_failed", detail: `${response.status}: ${detail}` }
   }
 
