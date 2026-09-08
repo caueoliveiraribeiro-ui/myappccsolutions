@@ -1,251 +1,42 @@
 "use client"
 
-import { FormEvent, useEffect, useMemo, useState } from "react"
-import { createPortal } from "react-dom"
-import { Activity, HeartPulse } from "lucide-react"
+import {FormEvent,useEffect,useMemo,useState} from "react"
+import {Activity,Flame,HeartPulse,Plus,Trash2} from "lucide-react"
+import {toast} from "sonner"
+import {Button} from "@/components/ui/button"
+import {Card} from "@/components/ui/card"
+import {Input} from "@/components/ui/input"
 
-import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
+type Entry={id:string;category:string;food_name:string;grams:number;calories:number;consumed_at:string}
+type Result={bmr:number;maintenance:number;target:number|null}
+export const foodCatalog={
+ Protein:{"Chicken breast":165,"Lean beef":250,Salmon:208,Tuna:132,Egg:155,"Turkey breast":135,Tofu:76,Lentils:116},
+ Grains:{"White rice":130,"Brown rice":123,Oats:389,"Whole-wheat bread":247,Pasta:131,Quinoa:120},
+ Fruit:{Apple:52,Banana:89,Orange:47,Strawberries:32,Blueberries:57,Mango:60,Avocado:160},
+ Vegetables:{Broccoli:35,Carrot:41,Spinach:23,Tomato:18,Potato:77,"Sweet potato":86,"Bell pepper":31},
+ Dairy:{"Whole milk":61,"Greek yogurt":97,"Cheddar cheese":403,"Cottage cheese":98,"Plain yogurt":61},
+ Snacks:{Almonds:579,"Peanut butter":588,"Dark chocolate":598,Popcorn:387,"Potato chips":536},
+} as const
+const activityOptions=[{value:1.2,label:"Sedentary"},{value:1.375,label:"Lightly active"},{value:1.55,label:"Moderately active"},{value:1.725,label:"Very active"},{value:1.9,label:"Extra active"}]
+const goalOptions=[{value:"maintain",label:"Maintain weight",adjustment:0},{value:"slow_loss",label:"Gradual weight loss",adjustment:-.1},{value:"moderate_loss",label:"Moderate weight loss",adjustment:-.15},{value:"gain",label:"Gradual weight gain",adjustment:.1}]
 
-type Result = {
-  bmr: number
-  maintenance: number
-  target: number | null
-  label: string
+export function HealthPage(){
+ const [entries,setEntries]=useState<Entry[]>([]),[category,setCategory]=useState<keyof typeof foodCatalog>("Protein"),[food,setFood]=useState("Chicken breast"),[grams,setGrams]=useState("100")
+ const [sex,setSex]=useState("male"),[age,setAge]=useState("30"),[height,setHeight]=useState("175"),[weight,setWeight]=useState("75"),[activity,setActivity]=useState("1.55"),[goal,setGoal]=useState("maintain"),[result,setResult]=useState<Result|null>(null),[error,setError]=useState("")
+ useEffect(()=>{fetch("/api/data/food_entries").then(r=>r.json()).then(d=>setEntries(d.items||[])).catch(()=>toast.error("We could not load your calorie history."))},[])
+ useEffect(()=>setFood(Object.keys(foodCatalog[category])[0]),[category])
+ const kcalPer100=Number((foodCatalog[category] as Record<string,number>)[food]||0),calories=Math.round(kcalPer100*Number(grams||0)/100)
+ const today=new Date().toISOString().slice(0,10),todayTotal=entries.filter(e=>e.consumed_at.slice(0,10)===today).reduce((n,e)=>n+Number(e.calories),0)
+ const days=useMemo(()=>Array.from({length:7},(_,i)=>{const d=new Date();d.setDate(d.getDate()-6+i);const key=d.toISOString().slice(0,10);return{key,label:d.toLocaleDateString(undefined,{weekday:"short"}),total:entries.filter(e=>e.consumed_at.slice(0,10)===key).reduce((n,e)=>n+Number(e.calories),0)}}),[entries])
+ async function addFood(e:FormEvent){e.preventDefault();if(!food||Number(grams)<=0)return toast.error("Choose a food and enter grams greater than zero.");const r=await fetch("/api/data/food_entries",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({category,food_name:food,grams:Number(grams),calories,consumed_at:new Date().toISOString()})}),d=await r.json();if(!r.ok)return toast.error(d.error||"We could not add this food.");setEntries(v=>[...(d.items||[]),...v]);toast.success("Added to today's calories.")}
+ async function remove(id:string){const r=await fetch("/api/data/food_entries",{method:"DELETE",headers:{"content-type":"application/json"},body:JSON.stringify({id})});if(!r.ok)return toast.error("We could not remove this entry.");setEntries(v=>v.filter(x=>x.id!==id))}
+ function calculate(e:FormEvent){e.preventDefault();setError("");const years=Number(age),cm=Number(height),kg=Number(weight),multiplier=Number(activity);if(years<18||years>100)return setError("This calculator is designed for adults ages 18–100.");if(cm<120||cm>230)return setError("Enter a height between 120 and 230 cm.");if(kg<35||kg>300)return setError("Enter a weight between 35 and 300 kg.");const selected=goalOptions.find(x=>x.value===goal)||goalOptions[0],bmr=10*kg+6.25*cm-5*years+(sex==="male"?5:-161),maintenance=bmr*multiplier,target=maintenance*(1+selected.adjustment);setResult({bmr:Math.round(bmr),maintenance:Math.round(maintenance),target:target<1200?null:Math.round(target)})}
+ return <div className="space-y-4 text-white"><div className="grid gap-4 xl:grid-cols-[1.1fr_.9fr]">
+  <Card className="border-cyan-300/20 bg-white/5 p-5 text-white"><div className="mb-5 flex items-center gap-3"><HeartPulse className="text-cyan-300"/><div><h2 className="font-semibold">Daily food tracker</h2><p className="text-sm text-slate-400">Choose a food, enter the portion and track today’s energy.</p></div></div><form onSubmit={addFood} className="grid gap-3 sm:grid-cols-2"><Select label="Food group" value={category} onChange={v=>setCategory(v as keyof typeof foodCatalog)} options={Object.keys(foodCatalog)}/><Select label="Food" value={food} onChange={setFood} options={Object.keys(foodCatalog[category])}/><label className="text-xs text-slate-400">Amount (grams)<Input className="mt-1" type="number" min="1" value={grams} onChange={e=>setGrams(e.target.value)}/></label><div className="rounded-xl border border-cyan-300/25 bg-cyan-300/10 p-3"><span className="text-xs text-cyan-100">This portion</span><b className="block text-2xl text-cyan-200">{calories.toLocaleString()} kcal</b><small className="text-slate-400">{kcalPer100} kcal per 100 g</small></div><Button className="sm:col-span-2 bg-cyan-300 text-slate-950"><Plus size={16}/>Add to today</Button></form></Card>
+  <Card className="border-violet-300/20 bg-violet-300/[.06] p-5 text-white"><div className="flex items-center gap-2 text-violet-200"><Flame/><h2 className="font-semibold">Today consumed</h2></div><b className="mt-4 block text-4xl">{Math.round(todayTotal).toLocaleString()} <span className="text-lg text-slate-400">kcal</span></b><div className="mt-6 grid grid-cols-7 items-end gap-2">{days.map(d=><div key={d.key} className="text-center"><div className="mx-auto w-full rounded-t bg-gradient-to-t from-cyan-500 to-violet-400" style={{height:`${Math.max(5,Math.min(120,d.total/20))}px`}} title={`${d.total} kcal`}/><small className="mt-2 block text-slate-500">{d.label}</small></div>)}</div></Card>
+ </div><Card className="border-white/10 bg-white/5 p-5 text-white"><details open><summary className="cursor-pointer font-semibold">Consumption history</summary><div className="mt-4 space-y-2">{entries.length===0?<p className="text-sm text-slate-400">No foods recorded yet.</p>:entries.slice(0,50).map(e=><div key={e.id} className="flex items-center justify-between rounded-xl border border-white/10 bg-black/20 p-3"><div><b className="text-sm">{e.food_name}</b><p className="text-xs text-slate-500">{new Date(e.consumed_at).toLocaleString()} · {e.grams} g · {e.category}</p></div><div className="flex items-center gap-3"><b className="text-cyan-200">{Math.round(e.calories)} kcal</b><Button type="button" variant="ghost" size="icon" onClick={()=>remove(e.id)} aria-label={`Delete ${e.food_name}`}><Trash2 size={16}/></Button></div></div>)}</div></details></Card>
+ <Card className="border-white/10 bg-white/5 p-5 text-white"><div className="mb-4 flex items-center gap-2"><Activity className="text-cyan-200"/><h2 className="font-semibold">Daily calorie calculator</h2></div><form onSubmit={calculate} className="grid gap-3 sm:grid-cols-3"><Select label="Sex" value={sex} onChange={setSex} options={["male","female"]}/><Input aria-label="Age" value={age} onChange={e=>setAge(e.target.value)} type="number" placeholder="Age"/><Input aria-label="Height in centimeters" value={height} onChange={e=>setHeight(e.target.value)} type="number" placeholder="Height (cm)"/><Input aria-label="Weight in kilograms" value={weight} onChange={e=>setWeight(e.target.value)} type="number" placeholder="Weight (kg)"/><Select label="Activity" value={activity} onChange={setActivity} options={activityOptions.map(x=>String(x.value))} labels={activityOptions.map(x=>x.label)}/><Select label="Goal" value={goal} onChange={setGoal} options={goalOptions.map(x=>x.value)} labels={goalOptions.map(x=>x.label)}/>{error&&<p role="alert" className="sm:col-span-3 text-sm text-red-300">{error}</p>}<Button className="sm:col-span-3 bg-cyan-300 text-slate-950">Calculate daily calories</Button></form>{result&&<div className="mt-4 grid gap-3 sm:grid-cols-3"><ResultRow label="BMR" value={`${result.bmr} kcal/day`}/><ResultRow label="Maintenance" value={`${result.maintenance} kcal/day`}/><ResultRow label="Goal target" value={result.target?`${result.target} kcal/day`:"Please consult a professional"}/></div>}<p className="mt-4 text-xs leading-5 text-slate-500">This estimate is not medical advice and does not replace a qualified clinician or dietitian.</p></Card></div>
 }
-
-const activityOptions = [
-  { value: 1.2, label: "Sedentary · little or no exercise" },
-  { value: 1.375, label: "Lightly active · 1–3 days/week" },
-  { value: 1.55, label: "Moderately active · 3–5 days/week" },
-  { value: 1.725, label: "Very active · 6–7 days/week" },
-  { value: 1.9, label: "Extra active · hard training / physical job" },
-]
-
-const goalOptions = [
-  { value: "maintain", label: "Maintain weight", adjustment: 0 },
-  { value: "slow_loss", label: "Gradual weight loss · about 10% deficit", adjustment: -0.1 },
-  { value: "moderate_loss", label: "Moderate weight loss · about 15% deficit", adjustment: -0.15 },
-  { value: "gain", label: "Gradual weight gain · about 10% surplus", adjustment: 0.1 },
-]
-
-export function OrbitHealthTab() {
-  const [open, setOpen] = useState(false)
-  const [target, setTarget] = useState<HTMLElement | null>(null)
-
-  useEffect(() => {
-    let cancelled = false
-    let timer: number | null = null
-
-    const bind = () => {
-      if (cancelled) return
-      const nav = document.querySelector("#orbit-navigation nav") as HTMLElement | null
-      const section = document.querySelector("main.wealth-dashboard section.min-w-0.flex-1") as HTMLElement | null
-      if (!nav || !section) {
-        timer = window.setTimeout(bind, 150)
-        return
-      }
-      setTarget(section)
-
-      let healthButton = nav.querySelector("[data-orbit-health-nav]") as HTMLButtonElement | null
-      if (!healthButton) {
-        const expensesButton = Array.from(nav.querySelectorAll("button")).find((button) =>
-          (button.getAttribute("aria-label") || button.textContent || "").trim() === "Expenses",
-        ) as HTMLButtonElement | undefined
-
-        if (!expensesButton) {
-          timer = window.setTimeout(bind, 150)
-          return
-        }
-
-        healthButton = document.createElement("button")
-        healthButton.type = "button"
-        healthButton.dataset.orbitHealthNav = "true"
-        healthButton.setAttribute("aria-label", "Health")
-        healthButton.setAttribute("title", "Health")
-        healthButton.className = "relative flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm text-slate-400 transition-colors hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200"
-        healthButton.innerHTML = '<span class="relative z-10 flex items-center gap-3"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.29 1.51 4.04 3 5.5l7 7Z"/><path d="M3.22 12H9.5l.7-1.5 2.1 5 1.4-3H21"/></svg><span class="nav-label">Health</span></span>'
-        expensesButton.insertAdjacentElement("afterend", healthButton)
-        healthButton.addEventListener("click", () => setOpen(true))
-      }
-    }
-
-    bind()
-
-    const onNavigationClick = (event: Event) => {
-      const clicked = (event.target as HTMLElement | null)?.closest("#orbit-navigation button") as HTMLButtonElement | null
-      if (clicked && !clicked.matches("[data-orbit-health-nav]")) setOpen(false)
-    }
-    document.addEventListener("click", onNavigationClick, true)
-
-    return () => {
-      cancelled = true
-      if (timer) window.clearTimeout(timer)
-      document.removeEventListener("click", onNavigationClick, true)
-      document.querySelector("[data-orbit-health-nav]")?.remove()
-    }
-  }, [])
-
-  useEffect(() => {
-    if (!target) return
-    const healthButton = document.querySelector("[data-orbit-health-nav]") as HTMLButtonElement | null
-    if (healthButton) {
-      healthButton.setAttribute("aria-current", open ? "page" : "false")
-      healthButton.className = open
-        ? "relative flex w-full items-center gap-3 rounded-xl bg-cyan-300 px-3 py-2 text-sm text-slate-950 shadow-[0_0_18px_#3b82f655] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200"
-        : "relative flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm text-slate-400 transition-colors hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200"
-    }
-
-    const children = Array.from(target.children) as HTMLElement[]
-    children.forEach((child) => {
-      if (child.matches("[data-orbit-health-page]")) return
-      if (open) {
-        if (!child.dataset.orbitHealthDisplay) child.dataset.orbitHealthDisplay = child.style.display || "__empty__"
-        child.style.display = "none"
-      } else if (child.dataset.orbitHealthDisplay) {
-        child.style.display = child.dataset.orbitHealthDisplay === "__empty__" ? "" : child.dataset.orbitHealthDisplay
-        delete child.dataset.orbitHealthDisplay
-      }
-    })
-
-    return () => {
-      Array.from(target.children).forEach((node) => {
-        const child = node as HTMLElement
-        if (!child.dataset.orbitHealthDisplay) return
-        child.style.display = child.dataset.orbitHealthDisplay === "__empty__" ? "" : child.dataset.orbitHealthDisplay
-        delete child.dataset.orbitHealthDisplay
-      })
-    }
-  }, [open, target])
-
-  if (!open || !target) return null
-  return createPortal(<HealthPage />, target)
-}
-
-function HealthPage() {
-  const [sex, setSex] = useState("male")
-  const [age, setAge] = useState("30")
-  const [height, setHeight] = useState("175")
-  const [weight, setWeight] = useState("75")
-  const [activity, setActivity] = useState("1.55")
-  const [goal, setGoal] = useState("maintain")
-  const [result, setResult] = useState<Result | null>(null)
-  const [error, setError] = useState("")
-
-  const selectedGoal = useMemo(() => goalOptions.find((item) => item.value === goal) || goalOptions[0], [goal])
-
-  function calculate(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    setError("")
-
-    const years = Number(age)
-    const cm = Number(height)
-    const kg = Number(weight)
-    const multiplier = Number(activity)
-
-    if (!Number.isFinite(years) || years < 18 || years > 100) return setError("This calculator is designed for adults ages 18–100.")
-    if (!Number.isFinite(cm) || cm < 120 || cm > 230) return setError("Enter a height between 120 and 230 cm.")
-    if (!Number.isFinite(kg) || kg < 35 || kg > 300) return setError("Enter a weight between 35 and 300 kg.")
-    if (!Number.isFinite(multiplier)) return setError("Choose an activity level.")
-
-    const bmr = 10 * kg + 6.25 * cm - 5 * years + (sex === "male" ? 5 : -161)
-    const maintenance = bmr * multiplier
-    const calculatedTarget = maintenance * (1 + selectedGoal.adjustment)
-    const targetCalories = calculatedTarget < 1200 ? null : calculatedTarget
-
-    setResult({
-      bmr: Math.round(bmr),
-      maintenance: Math.round(maintenance),
-      target: targetCalories === null ? null : Math.round(targetCalories),
-      label: selectedGoal.label,
-    })
-  }
-
-  return (
-    <div data-orbit-health-page className="min-w-0 space-y-4 text-white">
-      <header className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 p-4">
-        <div className="flex items-center gap-3">
-          <div className="grid h-11 w-11 place-items-center rounded-xl border border-cyan-300/20 bg-cyan-300/10 text-cyan-200"><HeartPulse size={20} /></div>
-          <div>
-            <h1 className="text-xl font-semibold">Health</h1>
-            <p className="text-xs text-slate-500">Personal wellness tools inside your Orbit.</p>
-          </div>
-        </div>
-      </header>
-
-      <div className="grid gap-4 xl:grid-cols-[1.15fr_.85fr]">
-        <Card className="border-white/10 bg-white/5 p-5 text-white">
-          <div>
-            <div className="flex items-center gap-2"><Activity size={18} className="text-cyan-200" /><h2 className="font-semibold">Daily calorie calculator</h2></div>
-            <p className="mt-2 text-sm leading-6 text-slate-400">Estimate your basal metabolic rate (BMR), maintenance calories and a conservative daily calorie target using the Mifflin–St Jeor equation.</p>
-          </div>
-
-          <form onSubmit={calculate} className="grid gap-4 sm:grid-cols-2">
-            <label className="text-xs text-slate-400">Sex used by the equation
-              <select value={sex} onChange={(event) => setSex(event.target.value)} className="mt-1 h-10 w-full rounded-md border border-white/10 bg-[#111827] px-3 text-sm text-white">
-                <option value="male">Male</option>
-                <option value="female">Female</option>
-              </select>
-            </label>
-            <label className="text-xs text-slate-400">Age
-              <Input value={age} onChange={(event) => setAge(event.target.value)} type="number" min="18" max="100" inputMode="numeric" className="mt-1" />
-            </label>
-            <label className="text-xs text-slate-400">Height (cm)
-              <Input value={height} onChange={(event) => setHeight(event.target.value)} type="number" min="120" max="230" step="0.1" inputMode="decimal" className="mt-1" />
-            </label>
-            <label className="text-xs text-slate-400">Weight (kg)
-              <Input value={weight} onChange={(event) => setWeight(event.target.value)} type="number" min="35" max="300" step="0.1" inputMode="decimal" className="mt-1" />
-            </label>
-            <label className="text-xs text-slate-400 sm:col-span-2">Activity level
-              <select value={activity} onChange={(event) => setActivity(event.target.value)} className="mt-1 h-10 w-full rounded-md border border-white/10 bg-[#111827] px-3 text-sm text-white">
-                {activityOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
-              </select>
-            </label>
-            <label className="text-xs text-slate-400 sm:col-span-2">Goal
-              <select value={goal} onChange={(event) => setGoal(event.target.value)} className="mt-1 h-10 w-full rounded-md border border-white/10 bg-[#111827] px-3 text-sm text-white">
-                {goalOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
-              </select>
-            </label>
-            {error && <p role="alert" className="sm:col-span-2 rounded-xl border border-red-400/20 bg-red-400/10 p-3 text-sm text-red-200">{error}</p>}
-            <Button type="submit" className="sm:col-span-2 bg-cyan-300 text-slate-950">Calculate daily calories</Button>
-          </form>
-        </Card>
-
-        <div className="space-y-4">
-          <Card className="border-white/10 bg-white/5 p-5 text-white">
-            <h2 className="font-semibold">Your estimate</h2>
-            {!result ? (
-              <p className="text-sm leading-6 text-slate-400">Enter your details and calculate to see your estimated energy needs.</p>
-            ) : (
-              <div className="space-y-3">
-                <ResultRow label="BMR" value={`${result.bmr.toLocaleString()} kcal/day`} sub="Estimated energy used at rest" />
-                <ResultRow label="Maintenance" value={`${result.maintenance.toLocaleString()} kcal/day`} sub="Estimated daily energy expenditure" />
-                {result.target === null ? (
-                  <div className="rounded-xl border border-amber-300/20 bg-amber-300/10 p-3 text-sm leading-5 text-amber-100">The calculated goal would be unusually low. Orbit will not recommend that target; consider speaking with a qualified clinician or dietitian.</div>
-                ) : (
-                  <ResultRow label="Goal target" value={`${result.target.toLocaleString()} kcal/day`} sub={result.label} emphasis />
-                )}
-              </div>
-            )}
-          </Card>
-
-          <Card className="border-cyan-300/15 bg-cyan-300/[.05] p-5 text-white">
-            <h3 className="font-semibold text-cyan-100">About this estimate</h3>
-            <p className="text-sm leading-6 text-slate-400">This tool provides an estimate, not a diagnosis or medical prescription. Actual energy needs can differ. It is intended for adults and is not designed for pregnancy, minors, eating-disorder treatment, or medical conditions that affect nutrition or metabolism.</p>
-          </Card>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function ResultRow({ label, value, sub, emphasis = false }: { label: string; value: string; sub: string; emphasis?: boolean }) {
-  return (
-    <div className={emphasis ? "rounded-xl border border-cyan-300/30 bg-cyan-300/10 p-4" : "rounded-xl border border-white/10 bg-black/20 p-4"}>
-      <p className="text-xs uppercase tracking-wide text-slate-500">{label}</p>
-      <b className={emphasis ? "mt-1 block text-2xl text-cyan-100" : "mt-1 block text-xl text-white"}>{value}</b>
-      <p className="mt-1 text-xs text-slate-500">{sub}</p>
-    </div>
-  )
-}
+export const OrbitHealthTab=HealthPage
+function Select({label,value,onChange,options,labels}:{label:string;value:string;onChange:(value:string)=>void;options:string[];labels?:string[]}){return <label className="text-xs text-slate-400">{label}<select aria-label={label} value={value} onChange={e=>onChange(e.target.value)} className="mt-1 h-10 w-full rounded-md border border-white/10 bg-[#111827] px-3 text-sm text-white">{options.map((x:string,i:number)=><option key={x} value={x}>{labels?.[i]||x}</option>)}</select></label>}
+function ResultRow({label,value}:{label:string;value:string}){return <div className="rounded-xl border border-cyan-300/20 bg-cyan-300/[.06] p-3"><span className="text-xs text-slate-400">{label}</span><b className="block text-lg">{value}</b></div>}
