@@ -8,10 +8,10 @@ import {
   syncCrmCalendarEvent,
   deleteCrmCalendarEvent,
 } from "@/lib/google-calendar-sync"
-const allowed=new Set(["leads","tasks","assets","projects","activities","clients","expenses","grocery_items","portfolios","holdings","payment_records","food_entries","savings_goals"])
+const allowed=new Set(["leads","tasks","assets","projects","activities","clients","expenses","grocery_items","portfolios","holdings","payment_records","food_entries","savings_goals","invoices"])
 type U={id:string;email:string}
 type Context={params:Promise<{resource:string}>}
-function cleanFields(input:Record<string,unknown>){const out={...input};const dates=new Set(["due_date","deadline","payment_date","received_at","charge_date","last_call_date","next_follow_up_date","next_follow_up","expense_date","purchased_at","start_time","consumed_at","target_date"]);const numbers=new Set(["amount","budget","cost","estimated_value","service_amount","lifetime_value","quantity","estimated_cost","actual_cost","buy_price","current_price","grams","calories","target_amount","current_amount"]);for(const [key,value] of Object.entries(out)){if(value===""&&dates.has(key))out[key]=null;if(numbers.has(key)&&value==="")out[key]=0;if((key==="currency"||key==="quote_currency")&&typeof value==="string")out[key]=value.trim().toUpperCase()}return out}
+function cleanFields(input:Record<string,unknown>){const out={...input};const dates=new Set(["due_date","deadline","payment_date","received_at","charge_date","last_call_date","next_follow_up_date","next_follow_up","expense_date","purchased_at","start_time","consumed_at","target_date","issue_date","sent_at"]);const numbers=new Set(["amount","budget","cost","estimated_value","service_amount","lifetime_value","quantity","estimated_cost","actual_cost","buy_price","current_price","grams","calories","target_amount","current_amount"]);for(const [key,value] of Object.entries(out)){if(value===""&&dates.has(key))out[key]=null;if(numbers.has(key)&&value==="")out[key]=0;if((key==="currency"||key==="quote_currency")&&typeof value==="string")out[key]=value.trim().toUpperCase()}return out}
 
 async function auth(){const token=(await cookies()).get("orbit_session")?.value;return token?await getSession(token) as U|null:null}
 async function owners(u:U){const memberships=await db(`workspace_members?member_user_id=eq.${u.id}&select=owner_user_id,permission`).catch(()=>[]);return [{owner_user_id:u.id,permission:"editor"},...memberships]}
@@ -204,3 +204,4 @@ await db(
 return NextResponse.json({ ok: true })
  }catch(e){return failure(e)}
 }
+

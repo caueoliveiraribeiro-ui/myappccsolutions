@@ -22,7 +22,6 @@ export async function POST(req: NextRequest) {
 
   const token = (await cookies()).get("orbit_session")?.value
   const user = token ? await getSession(token) : null
-  if (!user) return NextResponse.json({ error: "Please sign in before sending a message to Orbit Support. This keeps your conversation private and lets our team reply in your inbox." }, { status: 401 })
 
   const length = Number(req.headers.get("content-length") || 0)
   if (length > MAX_BODY_BYTES) return NextResponse.json({ error: "Request too large" }, { status: 413 })
@@ -56,7 +55,7 @@ export async function POST(req: NextRequest) {
     const result = await answerOrbitSupport(message, context)
     let conversationId: string | null = null
 
-    try {
+    if (user) try {
       const conversation = await getOrCreateOpenConversation(user.id, message.slice(0, 80))
       if (!conversation?.id) throw new Error("Support conversation could not be created.")
       conversationId = conversation.id
@@ -71,7 +70,7 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json(
-      { ...result, authenticated: true, conversationId },
+      { ...result, authenticated: Boolean(user), conversationId },
       { headers: { "Cache-Control": "no-store" } },
     )
   } catch (error) {
