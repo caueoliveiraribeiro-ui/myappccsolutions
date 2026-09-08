@@ -60,7 +60,7 @@ export function OrbitArchiveControls() {
     if (!row || row.archived) return
 
     const existingArchiveButton = Array.from(form.querySelectorAll("button")).find((button) =>
-      /(^|\s)archive(\s|$)/i.test((button.textContent || "").trim()),
+      /(^|\s)archiv(?:e|ing)(\s|$)/i.test((button.textContent || "").trim()),
     )
     if (existingArchiveButton || form.querySelector(`[data-orbit-${resource}-archive-action]`)) return
 
