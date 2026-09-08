@@ -83,7 +83,7 @@ export function OrbitArchiveControls() {
       await setArchived(resource, fresh, true)
     })
     const deleteButton = Array.from(submit.parentElement.querySelectorAll("button")).find((button) => /delete/i.test(button.textContent || ""))
-    submit.parentElement.insertBefore(action, deleteButton || null)
+    submit.parentElement.insertBefore(action, deleteButton?.parentElement === submit.parentElement ? deleteButton : null)
   }
 
   function scan() {
@@ -115,9 +115,8 @@ export function OrbitArchiveControls() {
         trigger.dataset.orbitClientArchiveTrigger = "true"
         trigger.className = buttonClass
         trigger.addEventListener("click", () => setView("clients"))
-        const importButton = Array.from(controls.querySelectorAll("button")).find((button) => /import/i.test(button.textContent || ""))
-        if (importButton?.nextSibling) controls.insertBefore(trigger, importButton.nextSibling)
-        else controls.insertBefore(trigger, clientSearch.closest("div.relative"))
+        const searchWrapper = clientSearch.closest("div.relative")
+        controls.insertBefore(trigger, searchWrapper?.parentElement === controls ? searchWrapper : null)
       }
       const trigger = controls?.querySelector("[data-orbit-client-archive-trigger]") as HTMLButtonElement | null
       if (trigger) trigger.textContent = `Archived clients (${records.current.clients.filter((row) => row.archived).length}/50)`
@@ -169,7 +168,7 @@ export function OrbitArchiveControls() {
           trigger.addEventListener("click", () => setView("projects"))
           box.append(currency, trigger)
           const search = header.querySelector('input[placeholder="Search current view"]')?.closest("div")
-          header.insertBefore(box, search || null)
+          header.insertBefore(box, search?.parentElement === header ? search : null)
         }
       }
       const projectTrigger = document.querySelector("[data-orbit-project-archive-trigger]") as HTMLButtonElement | null

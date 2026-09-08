@@ -50,15 +50,15 @@ html[data-orbit-theme="light"] .wealth-dashboard [class*="bg-black/"] { backgrou
 @property --orbit-border-angle { syntax:"<angle>"; initial-value:0deg; inherits:false; }
 .wealth-dashboard { --orbit-neon:#22d3ee; --orbit-bloom:#22d3ee30; --orbit-inner:#67e8f91c; --orbit-shade-cyan:#22d3ee13; --orbit-shade-purple:#a78bfa1c; }
 html[data-orbit-theme="light"] .wealth-dashboard { --orbit-neon:#0891b2; --orbit-bloom:#0891b22b; --orbit-inner:#22d3ee20; --orbit-shade-cyan:#22d3ee19; --orbit-shade-purple:#8b5cf61a; }
-.wealth-dashboard :is([data-slot="card"],details,.current-price-pill) {
+.wealth-dashboard :is([data-slot="card"],details[class~="border"],.current-price-pill) {
  position:relative; border-color:var(--orbit-neon);
  box-shadow:inset 0 0 16px var(--orbit-inner),0 0 12px var(--orbit-bloom),0 10px 30px #02061712;
  transition:box-shadow .3s ease,border-color .3s ease;
 }
-.wealth-dashboard :is([data-slot="card"],details):not(.metric-card--orange):not(.metric-card--blue) {
+.wealth-dashboard :is([data-slot="card"],details[class~="border"]):not(.metric-card--orange):not(.metric-card--blue) {
  background-image:linear-gradient(120deg,var(--orbit-shade-cyan),transparent 48%,var(--orbit-shade-purple))!important;
 }
-.wealth-dashboard :is([data-slot="card"],details,.current-price-pill)::after {
+.wealth-dashboard :is([data-slot="card"],details[class~="border"],.current-price-pill)::after {
  content:"";position:absolute;inset:-1px;border:0;padding:1px;border-radius:inherit;pointer-events:none;
  background:conic-gradient(from var(--orbit-border-angle),transparent 0deg,transparent 220deg,var(--orbit-neon) 270deg,#a78bfa 300deg,transparent 335deg);
  -webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);
@@ -76,13 +76,29 @@ html[data-orbit-theme="light"] .wealth-dashboard { --orbit-neon:#0891b2; --orbit
 .wealth-dashboard .metric-card--blue { --orbit-neon:#38bdf8;--orbit-bloom:#38bdf845;--orbit-inner:#bae6fd30; }
 html[data-orbit-theme="light"] .wealth-dashboard .current-price-pill { box-shadow:inset 0 0 14px #22d3ee30,0 0 14px #0891b240; }
 @media(hover:hover) {
- .wealth-dashboard :is([data-slot="card"],details,.current-price-pill):hover {
+ .wealth-dashboard :is([data-slot="card"],details[class~="border"],.current-price-pill):hover {
   box-shadow:inset 0 0 22px var(--orbit-inner),0 0 22px var(--orbit-bloom),0 12px 32px #02061714;
  }
- .wealth-dashboard :is([data-slot="card"],details):hover::after { animation:orbit-neon-border 8s linear infinite; }
+ .wealth-dashboard :is([data-slot="card"],details[class~="border"]):hover::after { animation:orbit-neon-border 8s linear infinite; }
 }
 @keyframes orbit-neon-border { to { --orbit-border-angle:360deg; } }
 
 @media(prefers-reduced-motion:reduce) {
  .orbit-home *, .orbit-home *::before, .orbit-home *::after, .wealth-dashboard *, .wealth-dashboard *::before, .wealth-dashboard *::after { animation:none!important; transition:none!important; scroll-behavior:auto!important; }
 }
+
+
+/* Native controls and scroll areas inherit Orbit colors, not OS white surfaces. */
+:root { color-scheme:dark; --orbit-scroll-track:#0b1524; --orbit-scroll-thumb:#2386a3; }
+* { scrollbar-width:thin; scrollbar-color:var(--orbit-scroll-thumb) var(--orbit-scroll-track); }
+*::-webkit-scrollbar { width:9px;height:9px; }
+*::-webkit-scrollbar-track { background:var(--orbit-scroll-track);border-radius:12px; }
+*::-webkit-scrollbar-thumb { background:var(--orbit-scroll-thumb);border:2px solid var(--orbit-scroll-track);border-radius:12px; }
+*::-webkit-scrollbar-corner { background:var(--orbit-scroll-track); }
+select { color-scheme:dark; }
+select :is(option,optgroup) { background:#0b1728;color:#e2e8f0; }
+.wealth-dashboard .invoice-create-card { background-color:#07111f; }
+html[data-orbit-theme="light"]:has(.wealth-dashboard) { --orbit-scroll-track:#edf4fb;--orbit-scroll-thumb:#2386a3; }
+html[data-orbit-theme="light"] .wealth-dashboard .invoice-create-card { background-color:#fff; }
+html[data-orbit-theme="light"] .wealth-dashboard select { color-scheme:light; }
+html[data-orbit-theme="light"] .wealth-dashboard select :is(option,optgroup) { background:#f8fbff;color:#172b44; }

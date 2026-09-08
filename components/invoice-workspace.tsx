@@ -111,7 +111,7 @@ export function InvoiceWorkspace({ invoices = [], clients = [], projects = [], c
   }
 
   return <div className="space-y-5">
-    <Card className="overflow-hidden border-cyan-300/25 bg-[linear-gradient(135deg,rgba(7,17,31,.98),rgba(14,32,52,.96))] p-0 text-white shadow-[0_18px_65px_rgba(0,0,0,.22)]">
+    <Card className="invoice-create-card overflow-hidden border-cyan-300/25 bg-[linear-gradient(135deg,rgba(7,17,31,.98),rgba(14,32,52,.96))] p-0 text-white shadow-[0_18px_65px_rgba(0,0,0,.22)]">
       <details className="group" open>
         <summary className="flex cursor-pointer list-none items-center justify-between gap-4 p-5 sm:p-6">
           <div className="flex items-center gap-4"><span className="grid h-11 w-11 place-items-center rounded-2xl border border-cyan-300/30 bg-cyan-300/10 text-cyan-200"><FileText size={21}/></span><div><h2 className="font-semibold">Create a polished invoice</h2><p className="mt-1 text-sm text-slate-400">Create, download, or email a branded PDF from one secure workspace.</p></div></div>
