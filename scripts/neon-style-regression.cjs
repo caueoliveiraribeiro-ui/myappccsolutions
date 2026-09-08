@@ -1,0 +1,11 @@
+const fs=require('node:fs'),assert=require('node:assert/strict');
+const css=fs.readFileSync('app/orbit-polish.css','utf8'),ops=fs.readFileSync('components/operations-dashboard.tsx','utf8');
+assert.ok(!ops.includes('WorkspaceMotion'));
+assert.ok(!css.includes('.workspace-launch'));
+assert.ok(css.includes('mask-composite:exclude'));
+assert.ok(css.includes('pointer-events:none'));
+assert.ok(css.includes('orbit-neon-border'));
+assert.ok(css.includes('html[data-orbit-theme="light"] .wealth-dashboard { --orbit-neon:'));
+assert.ok(css.includes('prefers-reduced-motion:reduce'));
+assert.ok(!fs.existsSync('app/ui-preview/page.tsx'));
+console.log('PASS: banner removed, scoped theme glow, noninteractive border mask, reduced-motion fallback, no test route');
