@@ -1,5 +1,6 @@
 -- Daily automatic invoice drafts
--- Creates one draft per eligible Big Business / owner client exactly two days before their charge date.
+-- Creates one draft per eligible Big Business / owner client up to two days before their charge date.
+-- The small catch-up window means a newly configured client due tomorrow is not missed.
 -- The production scheduler calls this function using the service role only.
 create or replace function public.orbit_create_all_invoice_drafts()
 returns integer
@@ -15,7 +16,7 @@ begin
     select distinct c.user_id
     from public.clients c
     where coalesce(c.archived, false) = false
-      and c.charge_date = current_date + 2
+      and c.charge_date between current_date and current_date + 2
       and coalesce(c.service_amount, 0) > 0
       and c.email ~ '^[^@[:space:]]+@[^@[:space:]]+\\.[^@[:space:]]+$'
       and (
