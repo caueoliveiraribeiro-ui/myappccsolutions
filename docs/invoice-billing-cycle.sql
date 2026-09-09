@@ -15,6 +15,8 @@ begin
 
   if inv.status <> 'void' and inv.due_date is not null and inv.client_id is not null then
     update public.clients c set charge_date=case
+      when lower(trim(coalesce(c.billing_frequency,''))) in ('weekly','every week','semanal','semanalmente')
+        then c.charge_date + 7
       when lower(trim(coalesce(c.billing_frequency,''))) in ('monthly','once a month')
         then (c.charge_date + interval '1 month')::date
       when lower(trim(coalesce(c.billing_frequency,''))) in ('biweekly','bi-weekly')

@@ -69,7 +69,7 @@ begin
  select c.* from public.clients c
  where (p_owner is null or c.user_id=p_owner)
  and coalesce(c.status,'Active') not in ('Lost','Past','Paused','Cancelled')
- and lower(trim(coalesce(c.billing_frequency,'One-time'))) in ('monthly','biweekly','once a month','one-time','one time','once')
+ and lower(trim(coalesce(c.billing_frequency,'One-time'))) in ('weekly','monthly','biweekly','once a month','one-time','one time','once')
  and c.charge_date between (now() at time zone 'UTC')::date and (now() at time zone 'UTC')::date+10
  and coalesce(c.service_amount,0)>0
  ), claimed as (

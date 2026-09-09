@@ -7,6 +7,7 @@ begin
  where not coalesce(c.archived,false) and c.user_id in ('00000000-0000-4000-8000-000000000001','c38a52ed-766f-47b1-abbd-bc8e152dcaa9') limit 1;
  if client_key is null then raise exception 'Missing rollback fixture'; end if;
  for scenario in select * from (values
+ ('Weekly','2026-12-25'::date,'2027-01-01'::date),
  ('Monthly','2027-01-31'::date,'2027-02-28'::date),
  ('Monthly','2028-01-31'::date,'2028-02-29'::date),
  ('Biweekly','2026-12-25'::date,'2027-01-08'::date),

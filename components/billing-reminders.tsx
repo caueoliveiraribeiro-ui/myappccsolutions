@@ -8,7 +8,7 @@ export function BillingReminders({clients=[],tasks=[],editTask,currency="USD",re
  const convert=useCurrencyRates(clients,currency);
  const today=new Date().toISOString().slice(0,10);
  const tomorrow=new Date(Date.now()+86400000).toISOString().slice(0,10);
- const recurring=clients.filter((c:Row)=>["monthly","biweekly","once a month"].includes(String(c.billing_frequency||"").toLowerCase())&&c.charge_date&&!["Lost","Past","Paused"].includes(c.status)).sort((a:Row,b:Row)=>String(a.charge_date).localeCompare(String(b.charge_date)));
+ const recurring=clients.filter((c:Row)=>["weekly","monthly","biweekly","once a month"].includes(String(c.billing_frequency||"").toLowerCase())&&c.charge_date&&!["Lost","Past","Paused"].includes(c.status)).sort((a:Row,b:Row)=>String(a.charge_date).localeCompare(String(b.charge_date)));
  const money=(amount:number)=>Number.isFinite(amount)?new Intl.NumberFormat(undefined,{style:"currency",currency}).format(amount):"Conversion unavailable";
  return <details className="group/upcoming rounded-xl min-w-0 border border-red-400/70 bg-gradient-to-br from-[#4a141e] via-[#241018] to-[#0b101a] font-bold text-white shadow-[0_0_25px_rgba(248,113,113,.16)]">
  <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-xl p-5 text-lg font-bold text-red-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-300"><span>Upcoming client payments</span><span aria-hidden="true" className="text-red-300 transition-transform group-open/upcoming:rotate-180">⌄</span></summary>

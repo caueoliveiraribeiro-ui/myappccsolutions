@@ -164,7 +164,7 @@ begin
     c.id,c.charge_date,coalesce(c.service_amount,0),coalesce(nullif(c.currency,''),'USD'),''
   from public.clients c
   where (p_owner is null or c.user_id=p_owner)
-    and lower(c.billing_frequency) in ('monthly','biweekly','once a month')
+    and lower(c.billing_frequency) in ('weekly','monthly','biweekly','once a month')
     and coalesce(c.status,'Active') not in ('Lost','Past','Paused')
     and c.charge_date <= (now() at time zone 'UTC')::date + 1
   on conflict(user_id,billing_client_id,billing_due_date) where billing_client_id is not null
