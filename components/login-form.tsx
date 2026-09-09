@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { MobileNavigation } from "@/components/mobile-navigation"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -41,6 +42,7 @@ export function LoginForm({returnTo="/dashboard"}:{returnTo?:string}) {
   const openAccess=()=>{setError("");document.getElementById("access")?.scrollIntoView({behavior:"smooth"})}
 
   return <main className="orbit-home relative min-h-screen overflow-hidden bg-[#050812] text-white">
+    <MobileNavigation />
     <div className="orbit-art fixed inset-[-6%]"/><div className="login-aurora fixed inset-[-8%] bg-[radial-gradient(circle_at_16%_0%,rgba(34,211,238,.32),transparent_36%),radial-gradient(circle_at_84%_100%,rgba(139,92,246,.24),transparent_38%)]"/><div className="login-grid fixed inset-0"/><div className="login-orb fixed left-[8%] top-[18%]"/><div className="login-orb animation-delay-2 fixed bottom-[12%] right-[7%]"/>
     <nav className="relative z-20 mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-6 py-6"><a href="#access" className="flex items-center gap-3"><span className="grid h-12 w-12 place-items-center rounded-2xl bg-cyan-300 text-slate-950 shadow-[0_0_30px_rgba(34,211,238,.4)]"><Sparkles size={24}/></span><span><b className="block text-lg">Orbit LM</b><small className="text-cyan-200/60">Life Management</small></span></a><div className="flex items-center gap-2"><Button variant="ghost" asChild><a href={LANDING_PLANS_URL}>Explore plans</a></Button><Button className="bg-cyan-300 text-slate-950" onClick={openAccess}>Sign in</Button></div></nav>
     <section id="access" className="relative z-10 mx-auto grid min-h-[760px] max-w-7xl place-items-center px-5 pb-20 pt-8"><div className="login-shell grid w-full max-w-5xl overflow-hidden rounded-[32px] border border-white/10 bg-white/[.055] shadow-[0_30px_90px_rgba(0,0,0,.48)] backdrop-blur-2xl lg:grid-cols-[1.15fr_.85fr]">

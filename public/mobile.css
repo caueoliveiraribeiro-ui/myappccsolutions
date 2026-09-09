@@ -1,3 +1,23 @@
+/* Persistent mobile navigation, independent of decorative animation. */
+@media(max-width:600px){
+ html:root{scroll-padding-top:calc(88px + env(safe-area-inset-top))}
+ body{padding-top:calc(80px + env(safe-area-inset-top))}
+ body .header{position:fixed;inset:0 0 auto;z-index:100;background:#09111ef5;border-bottom:1px solid #67e8f94d;box-shadow:0 5px 24px #22d3ee12;padding:calc(8px + env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) 8px max(16px,env(safe-area-inset-left))}
+ body .header nav{max-height:calc(100dvh - 100px - env(safe-area-inset-top));overflow-y:auto;overscroll-behavior:contain}
+ .header .brand{min-height:44px}
+ .header #menu-toggle[aria-expanded="true"] span:first-child{transform:translateY(3px) rotate(45deg)}
+ .header #menu-toggle[aria-expanded="true"] span:last-child{transform:translateY(-3px) rotate(-45deg)}
+ .hero .hero-copy>.eyebrow,.hero .hero-description,.hero .hero-note,.hero .actions>.text-link{display:none}
+ body .hero{min-height:0;padding-top:24px}
+ body .hero .actions{margin-top:20px}
+ body .hero-scene{margin-top:0}
+ .skip:focus{z-index:110}
+}
+@media(prefers-reduced-motion:reduce){
+ html:root{scroll-behavior:auto}
+ *,*::before,*::after{animation:none!important;transition:none!important}
+ .motion-ready .reveal{opacity:1;transform:none}
+}
 /* Mobile layout only: keep the desktop composition and all access rules intact. */
 @media(max-width:800px){
  .wrap>*{min-width:0}

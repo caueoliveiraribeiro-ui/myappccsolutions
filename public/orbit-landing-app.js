@@ -19,7 +19,10 @@ tabs.forEach((tab,index)=>{tab.addEventListener('click',()=>setView(tab.dataset.
 document.querySelectorAll('[data-view-link]').forEach(link=>link.addEventListener('click',()=>setView(link.dataset.viewLink)));
 const menu=document.getElementById('menu-toggle'),nav=document.getElementById('navigation');
 function closeMenu(){nav.classList.remove('is-open');menu.setAttribute('aria-expanded','false');menu.setAttribute('aria-label','Open navigation')}
-menu.addEventListener('click',()=>{const open=nav.classList.toggle('is-open');menu.setAttribute('aria-expanded',String(open));menu.setAttribute('aria-label',open?'Close navigation':'Open navigation')});
+menu.addEventListener('click',()=>{const open=nav.classList.toggle('is-open');menu.setAttribute('aria-expanded',String(open));menu.setAttribute('aria-label',open?'Close navigation':'Open navigation');if(open)nav.querySelector('a')?.focus()});
+document.addEventListener('click',event=>{if(!event.target.closest('.header'))closeMenu()});
+document.querySelector('.header').addEventListener('focusout',event=>{if(!event.currentTarget.contains(event.relatedTarget))closeMenu()});
+matchMedia('(min-width:601px)').addEventListener('change',event=>{if(event.matches)closeMenu()});
 nav.querySelectorAll('a').forEach(link=>link.addEventListener('click',closeMenu));
 document.addEventListener('keydown',event=>{if(event.key==='Escape'&&nav.classList.contains('is-open')){closeMenu();menu.focus()}});
 const dialog=document.getElementById('custom-dialog');
