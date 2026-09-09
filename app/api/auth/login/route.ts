@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { checkPassword, createSession, OWNER_ID, verifyUserPassword } from "@/lib/auth"
 import { db } from "@/lib/supabase"
+import { verifyMfa } from "@/lib/admin-mfa"
 
 const attempts = new Map<string, { count: number; reset: number }>()
 
@@ -39,9 +40,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid credentials" }, { status: 401 })
     }
 
+    let mfaVerified = false
+    if (id === OWNER_ID) {
+      const verification = await verifyMfa(id, String(body.mfa_code || "").trim())
+      if (verification.required && !verification.valid) {
+        return NextResponse.json({ error: "Enter the six-digit code from your authenticator app or a recovery code.", code: "MFA_REQUIRED" }, { status: 401 })
+      }
+      mfaVerified = verification.valid
+    }
+
     attempts.delete(ip)
     const response = NextResponse.json({ ok: true })
-    response.cookies.set("orbit_session", createSession(email, id), {
+    response.cookies.set("orbit_session", createSession(email, id, mfaVerified), {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "strict",

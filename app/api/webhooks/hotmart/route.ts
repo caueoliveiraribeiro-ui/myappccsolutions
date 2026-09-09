@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { timingSafeEqual } from "node:crypto"
 import { processHotmartEvent } from "@/lib/hotmart-webhook"
+import { recordOperationalEvent } from "@/lib/operations-log"
 
 export const runtime = "nodejs"
 
@@ -33,9 +34,11 @@ export async function POST(req: Request) {
 
   try {
     const result = await processHotmartEvent(payload as any)
+    await recordOperationalEvent("hotmart_webhook", "info", "processed", "Hotmart webhook processed.", { event: (payload as any)?.event || "unknown" })
     return NextResponse.json(result)
   } catch (error) {
     console.error("HOTMART_WEBHOOK_FAILED:", error)
+    await recordOperationalEvent("hotmart_webhook", "error", "failed", "Hotmart webhook could not be processed.")
     return NextResponse.json({ error: "Hotmart event could not be processed." }, { status: 503 })
   }
 }

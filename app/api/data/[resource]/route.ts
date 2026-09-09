@@ -3,6 +3,7 @@ import {cookies} from "next/headers"
 import {getSession} from "@/lib/auth"
 import {db,hasDatabase} from "@/lib/supabase"
 import {accountAccess,upgradeResponse,planWriteError} from "@/lib/plan-access"
+import { recordFinancialAudit } from "@/lib/operations-log"
 import {featureForResource} from "@/lib/plan-features"
 import {
   syncCrmCalendarEvent,
@@ -67,6 +68,9 @@ export async function POST(request:Request,{params}:Context){
   body: JSON.stringify(row),
 })
 
+if (resource === "payment_records" && items?.[0]) {
+  await recordFinancialAudit({ actorUserId: u.id, ownerUserId: items[0].user_id, resourceType: "payment", resourceId: items[0].id, action: "created", after: { amount: items[0].amount, currency: items[0].currency, status: items[0].status, payment_date: items[0].payment_date || items[0].received_at }, requestSource: "payment_ledger" })
+}
 if (resource === "tasks" && items?.[0]) {
   const task = items[0]
 
@@ -115,7 +119,7 @@ export async function PATCH(request:Request,{params}:Context){
   for(const key of ["asset_type","portfolio_type"])if(current[key]&&row[key]!==current[key])return NextResponse.json({error:"An asset's type cannot be changed."},{status:400})
   if(!await permitted(u.id,resource,current)||!await permitted(u.id,resource,row)||!await permitted(current.user_id,resource,row))return upgradeResponse()
   if(!await validLinks(resource,row,changes))return NextResponse.json({error:"Choose related records from the same workspace and asset type."},{status:400})
- const items = await db(
+const items = await db(
   `${resource}?id=eq.${encodeURIComponent(id)}&user_id=eq.${current.user_id}`,
   {
     method: "PATCH",
@@ -125,6 +129,10 @@ export async function PATCH(request:Request,{params}:Context){
     }),
   }
 )
+
+if (resource === "clients" && items?.[0] && ["charge_date", "billing_frequency", "service_amount", "currency"].some(key => key in changes)) {
+  await recordFinancialAudit({ actorUserId: u.id, ownerUserId: current.user_id, resourceType: "client_billing", resourceId: id, action: "updated", before: { charge_date: current.charge_date, billing_frequency: current.billing_frequency, service_amount: current.service_amount, currency: current.currency }, after: { charge_date: items[0].charge_date, billing_frequency: items[0].billing_frequency, service_amount: items[0].service_amount, currency: items[0].currency }, requestSource: "client_directory" })
+}
 
 if (resource === "tasks" && items?.[0]) {
   const task = items[0]

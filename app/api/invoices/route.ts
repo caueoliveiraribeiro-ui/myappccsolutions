@@ -3,6 +3,7 @@ import { cookies } from "next/headers"
 import { getSession } from "@/lib/auth"
 import { accountAccess, upgradeResponse } from "@/lib/plan-access"
 import { db } from "@/lib/supabase"
+import { recordFinancialAudit } from "@/lib/operations-log"
 
 const validStatus = new Set(["draft", "sent", "awaiting_payment", "paid", "overdue", "void"])
 const isoDate = (value: unknown, fallback: string | null) => {
@@ -73,6 +74,7 @@ export async function POST(request: Request) {
     const invoices = await db("invoices", { method: "POST", body: JSON.stringify(row) })
     const invoice = invoices?.[0]
     if (!invoice?.id) throw new Error("The invoice was not confirmed by the database.")
+    await recordFinancialAudit({ actorUserId: user.id, ownerUserId: user.id, resourceType: "invoice", resourceId: invoice.id, action: "created", after: { invoice_number: invoice.invoice_number, amount: invoice.amount, currency: invoice.currency, due_date: invoice.due_date, status: invoice.status }, requestSource: "invoice_workspace" })
     return NextResponse.json({ invoice }, { headers: { "Cache-Control": "no-store" } })
   } catch (error) {
     const detail = error instanceof Error ? error.message : ""

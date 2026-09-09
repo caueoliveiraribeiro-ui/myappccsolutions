@@ -1,5 +1,6 @@
 import { db } from "@/lib/supabase"
 import { invoicePdf } from "@/lib/invoice-pdf"
+import { recordOperationalEvent, recordFinancialAudit } from "@/lib/operations-log"
 
 export function invoiceEmailConfigured() {
   return Boolean(process.env.RESEND_API_KEY && process.env.RESEND_FROM_EMAIL)
@@ -50,11 +51,14 @@ export async function deliverInvoice(id: string, owner: string, replyTo: string,
       body: JSON.stringify({ p_invoice: id, p_token: invoice.email_claim_token, p_email_id: emailId }),
     })
     if (!updated?.[0]) throw new Error("Email accepted but invoice status needs review.")
+    await recordOperationalEvent("invoice_email", "info", "delivered", "Invoice email accepted by the delivery provider.", { invoiceId: id, automatic })
+    await recordFinancialAudit({ actorUserId: automatic ? null : owner, ownerUserId: owner, resourceType: "invoice", resourceId: id, action: "sent", after: { emailId, automatic }, requestSource: automatic ? "invoice_cron" : "invoice_workspace" })
     return { skipped: false as const, invoice: updated[0], emailId }
   } catch (error) {
     await db(`invoices?id=eq.${encodeURIComponent(id)}&email_claim_token=eq.${invoice.email_claim_token}`, {
       method: "PATCH", body: JSON.stringify({ email_delivery_error: "Delivery requires review in the email provider before retrying." }),
     }).catch(() => {})
+    await recordOperationalEvent("invoice_email", "error", "delivery_review_required", "Invoice delivery was not confirmed and requires review.", { invoiceId: id, automatic })
     throw error
   }
 }

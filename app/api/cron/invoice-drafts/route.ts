@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { db } from "@/lib/supabase"
 import { accountAccess } from "@/lib/plan-access"
 import { deliverInvoice, invoiceEmailConfigured } from "@/lib/invoice-delivery"
+import { recordOperationalEvent } from "@/lib/operations-log"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 300
@@ -42,11 +43,13 @@ export async function GET(request: Request) {
       await new Promise(resolve => setTimeout(resolve, 600))
     }
     console.log("INVOICE_DRAFT_CRON_COMPLETED", { created, sent, skipped, failed })
+    await recordOperationalEvent("invoice_cron", failed ? "error" : "info", failed ? "completed_with_failures" : "completed", `Invoice automation completed: ${created} drafts, ${sent} sent, ${failed} failed.`, { created, sent, skipped, failed })
     return NextResponse.json({ ok: failed === 0, created, sent, skipped, failed }, { status: failed ? 503 : 200 })
   } catch (error) {
     console.error("INVOICE_DRAFT_CRON_FAILED", {
       message: error instanceof Error ? error.message : String(error),
     })
+    await recordOperationalEvent("invoice_cron", "error", "failed", "Invoice automation could not complete.")
     return NextResponse.json({ error: "Invoice draft automation could not complete." }, { status: 503 })
   }
 }
