@@ -104,26 +104,22 @@ export function CrmEmailActions() {
     const scan = () => {
       const next: EmailTarget[] = []
       if (document.querySelector('input[name="service_amount"]')) {
-        const clientHeading = Array.from(document.querySelectorAll("h2")).find(
-          (node) => node.textContent?.trim() === "Client directory",
-        )
-        const clientPanel = clientHeading?.closest("[data-slot='card']") || clientHeading?.parentElement?.parentElement
-        if (clientPanel instanceof HTMLElement) {
-          clientPanel.querySelectorAll<HTMLFormElement>("details form").forEach((form, index) => {
-            const id = `client-${index}`
-            const slot = addSlot(form, id, "client")
-            if (slot) next.push({ id, slot, form, kind: "client" })
-          })
-        }
+        document.querySelectorAll<HTMLFormElement>("details form").forEach((form, index) => {
+          const isClient = Boolean(
+            form.querySelector('input[name="email"]') &&
+            form.querySelector('input[name="service_amount"]') &&
+            form.querySelector('select[name="billing_frequency"]'),
+          )
+          if (!isClient) return
+          const id = `client-${index}`
+          const slot = addSlot(form, id, "client")
+          if (slot) next.push({ id, slot, form, kind: "client" })
+        })
       }
 
       if (document.querySelector('input[name="next_follow_up_date"]')) {
-        const pipelineHeading = Array.from(document.querySelectorAll("h2")).find(
-          (node) => node.textContent?.trim() === "Lead history",
-        )
-        const pipelinePanel = pipelineHeading?.closest("[data-slot='card']") || pipelineHeading?.parentElement?.parentElement
-        if (pipelinePanel instanceof HTMLElement) {
-          pipelinePanel.querySelectorAll<HTMLFormElement>("details form").forEach((form, index) => {
+        document.querySelectorAll<HTMLFormElement>("details form").forEach((form, index) => {
+          if (!form.querySelector('input[name="company"]')) return
             const description = form.querySelector<HTMLTextAreaElement>('textarea[name="description"]')?.closest("label")
             const notes = form.querySelector<HTMLTextAreaElement>('textarea[name="notes"]')?.closest("label")
             const status = form.querySelector<HTMLSelectElement>('select[name="status"]')?.closest("label")
@@ -141,8 +137,7 @@ export function CrmEmailActions() {
             const id = `pipeline-${index}`
             const slot = addSlot(form, id, "pipeline")
             if (slot) next.push({ id, slot, form, kind: "pipeline" })
-          })
-        }
+        })
       }
 
       if (document.querySelector('input[name="contact_email"]')) {
