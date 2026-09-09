@@ -36,9 +36,8 @@ function fieldValue(form: HTMLFormElement, name: string) {
 }
 
 function addSlot(form: HTMLFormElement, id: string, kind: Kind) {
-  const saveButton = Array.from(form.querySelectorAll<HTMLButtonElement>("button")).find(
-    (button) => button.textContent?.trim() === "Save changes",
-  )
+  // Interface labels are translated after render; the submit type stays stable.
+  const saveButton = form.querySelector<HTMLButtonElement>('button[type="submit"]')
   if (!saveButton) return null
 
   let slot = form.querySelector<HTMLElement>(`[data-orbit-crm-email-action="${id}"]`)
@@ -104,9 +103,7 @@ export function CrmEmailActions() {
 
     const scan = () => {
       const next: EmailTarget[] = []
-      const pageTitle = (document.querySelector("h1")?.textContent || "").trim()
-
-      if (pageTitle === "Clients") {
+      if (document.querySelector('input[name="service_amount"]')) {
         const clientHeading = Array.from(document.querySelectorAll("h2")).find(
           (node) => node.textContent?.trim() === "Client directory",
         )
@@ -120,7 +117,7 @@ export function CrmEmailActions() {
         }
       }
 
-      if (pageTitle === "Pipeline") {
+      if (document.querySelector('input[name="next_follow_up_date"]')) {
         const pipelineHeading = Array.from(document.querySelectorAll("h2")).find(
           (node) => node.textContent?.trim() === "Lead history",
         )
@@ -148,7 +145,7 @@ export function CrmEmailActions() {
         }
       }
 
-      if (pageTitle === "Projects") {
+      if (document.querySelector('input[name="contact_email"]')) {
         document.querySelectorAll<HTMLFormElement>("form").forEach((form, index) => {
           const isProject = Boolean(
             form.querySelector('input[name="contact_email"]') &&
