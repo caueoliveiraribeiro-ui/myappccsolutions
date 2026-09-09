@@ -1,0 +1,16 @@
+const assert = require('node:assert/strict')
+const fs = require('node:fs')
+const path = require('node:path')
+const ts = require('typescript')
+const code = ts.transpileModule(fs.readFileSync(path.join(__dirname,'../lib/invoice-pdf.ts'),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText
+const mod = {exports:{}}
+new Function('exports','module',code)(mod.exports,mod)
+const render = colors => mod.exports.invoicePdf({invoice_number:'INV-TEST',amount:100,currency:'BRL',...colors}).toString('latin1')
+const custom = render({issuer_primary_color:'#FFFFFF',issuer_accent_color:'#FF0000'})
+assert.match(custom,/1\.000 0\.000 0\.000 rg/)
+assert.match(custom,/0\.000 0\.000 0\.000 rg BT/,'Light headers need dark lettering')
+assert.match(custom,/R\$100\.00/,'Original currency is rendered without conversion')
+const invalid = render({issuer_primary_color:'invalid',issuer_accent_color:'invalid'})
+assert.match(invalid,/0\.027 0\.067 0\.122 rg/)
+assert.match(invalid,/0\.071 0\.741 0\.878 rg/)
+console.log('PASS: custom PDF colors, readable foreground, original currency and safe defaults')

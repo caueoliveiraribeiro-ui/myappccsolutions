@@ -26,11 +26,11 @@ export function InvoiceWorkspace({ invoices = [], clients = [], projects = [], c
   const [selectedClient, setSelectedClient] = useState("")
   const [sending, setSending] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
-  const [brand, setBrand] = useState({ company_name: "", logo_data_url: "" })
+  const [brand, setBrand] = useState({ company_name: "", logo_data_url: "", primary_color: "#07111F", accent_color: "#12BDE0" })
   const [savingBrand, setSavingBrand] = useState(false)
   const [recordingPayment, setRecordingPayment] = useState<string | null>(null)
   const [visibleInvoiceCount, setVisibleInvoiceCount] = useState(40)
-  useEffect(() => { fetch("/api/invoice-branding").then(r => r.ok ? r.json() : {}).then((d: any) => d.branding && setBrand({ company_name: d.branding.company_name || "", logo_data_url: d.branding.logo_data_url || "" })).catch(() => {}) }, [])
+  useEffect(() => { fetch("/api/invoice-branding").then(r => r.ok ? r.json() : {}).then((d: any) => d.branding && setBrand({ company_name: d.branding.company_name || "", logo_data_url: d.branding.logo_data_url || "", primary_color: d.branding.primary_color || "#07111F", accent_color: d.branding.accent_color || "#12BDE0" })).catch(() => {}) }, [])
   const nextNumber = useMemo(() => `INV-${new Date().getFullYear()}-${String(invoices.length + 1).padStart(4, "0")}`, [invoices.length])
   const client = clients.find((item: Row) => item.id === selectedClient)
 
@@ -44,7 +44,7 @@ export function InvoiceWorkspace({ invoices = [], clients = [], projects = [], c
       const response = await fetch("/api/invoices", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ ...values, amount: Number(values.amount || 0), currency, status: String(values.status || "draft") }),
+        body: JSON.stringify({ ...values, amount: Number(values.amount || 0), currency: client?.currency || currency, status: String(values.status || "draft") }),
       })
       const data = await response.json().catch(() => ({}))
       if (!response.ok || !data.invoice?.id) throw new Error(data.error || "We could not create this invoice.")
@@ -65,7 +65,7 @@ export function InvoiceWorkspace({ invoices = [], clients = [], projects = [], c
       const response = await fetch("/api/invoice-branding", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(brand) })
       const data = await response.json().catch(() => ({}))
       if (!response.ok) throw new Error(data.error || "We could not save your invoice brand.")
-      setBrand({ company_name: data.branding.company_name || "", logo_data_url: data.branding.logo_data_url || "" })
+      setBrand({ company_name: data.branding.company_name || "", logo_data_url: data.branding.logo_data_url || "", primary_color: data.branding.primary_color || "#07111F", accent_color: data.branding.accent_color || "#12BDE0" })
       toast.success("Invoice brand saved.")
     } catch (error) { toast.error(error instanceof Error ? error.message : "We could not save your invoice brand.") } finally { setSavingBrand(false) }
   }
@@ -151,6 +151,16 @@ export function InvoiceWorkspace({ invoices = [], clients = [], projects = [], c
   }
 
   return <div className="space-y-5">
+    <Card className="invoice-brand-colors border-cyan-300/20 p-5 sm:p-6">
+      <h2 className="font-semibold">Your invoice colors</h2>
+      <p className="mt-1 text-sm text-slate-400">Choose the header and accent colors for new invoices, including automatic drafts. Existing invoices keep their saved colors.</p>
+      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+        <label className="flex min-h-12 items-center justify-between gap-3 rounded-xl border border-cyan-300/25 p-3">Header color<input aria-label="Invoice header color" type="color" value={brand.primary_color} onChange={e => setBrand(current => ({ ...current, primary_color: e.target.value }))} className="h-11 w-16 cursor-pointer"/></label>
+        <label className="flex min-h-12 items-center justify-between gap-3 rounded-xl border border-cyan-300/25 p-3">Accent color<input aria-label="Invoice accent color" type="color" value={brand.accent_color} onChange={e => setBrand(current => ({ ...current, accent_color: e.target.value }))} className="h-11 w-16 cursor-pointer"/></label>
+      </div>
+      <div aria-label="Invoice color preview" className="mt-4 h-16 rounded-xl border-b-4" style={{ backgroundColor: brand.primary_color, borderBottomColor: brand.accent_color }}/>
+      <Button className="mt-4" type="button" disabled={savingBrand} onClick={saveBrand}>{savingBrand ? "Saving…" : "Save invoice colors"}</Button>
+    </Card>
     <Card className="invoice-create-card overflow-hidden border-cyan-300/25 bg-[linear-gradient(135deg,rgba(7,17,31,.98),rgba(14,32,52,.96))] p-0 text-white shadow-[0_18px_65px_rgba(0,0,0,.22)]">
       <details className="group" open>
         <summary className="flex cursor-pointer list-none items-center justify-between gap-4 p-5 sm:p-6">
@@ -172,7 +182,7 @@ export function InvoiceWorkspace({ invoices = [], clients = [], projects = [], c
           <label className="text-xs font-medium text-slate-300">Invoice number<Input name="invoice_number" required defaultValue={nextNumber} className="mt-1.5 h-11"/></label>
           <label className="text-xs font-medium text-slate-300">Service / deliverable<select key={`service-${selectedClient}`} name="service_name" defaultValue={client?.service || ""} className="mt-1.5 h-11 w-full rounded-xl border border-white/10 bg-[#07111f] px-3"><option value="">Choose service</option>{client?.service && !services.includes(client.service) && <option>{client.service}</option>}{services.map(service=><option key={service}>{service}</option>)}</select></label>
           <label className="text-xs font-medium text-slate-300 md:col-span-2">Description<Textarea key={`description-${selectedClient}`} name="description" maxLength={500} defaultValue={client?.description || ""} placeholder="Describe the work included in this invoice" className="mt-1.5 min-h-20"/></label>
-          <label className="text-xs font-medium text-slate-300">Total due ({currency})<Input name="amount" required type="number" min="0" step="0.01" placeholder="0.00" className="mt-1.5 h-11"/></label>
+          <label className="text-xs font-medium text-slate-300">Total due ({client?.currency || currency})<Input key={selectedClient} name="amount" required type="number" min="0" step="0.01" defaultValue={client?.service_amount ?? ""} placeholder="0.00" className="mt-1.5 h-11"/></label>
           <label className="text-xs font-medium text-slate-300">Issue date<Input name="issue_date" type="date" defaultValue={new Date().toISOString().slice(0, 10)} className="mt-1.5 h-11"/></label>
           <label className="text-xs font-medium text-slate-300">Payment due date<Input name="due_date" type="date" className="mt-1.5 h-11"/></label>
           <label className="text-xs font-medium text-slate-300">Invoice status

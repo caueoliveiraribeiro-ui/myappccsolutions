@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { cookies } from "next/headers"
 import { getSession } from "@/lib/auth"
 import { answerOrbitSupport, type OrbitSupportContext } from "@/lib/orbit-support-agent"
+import { geminiSupport } from "@/lib/support-gemini"
 import { addSupportMessage, getOrCreateOpenConversation, markHumanRequested } from "@/lib/support-store"
 
 const MAX_BODY_BYTES = 16_384
@@ -55,7 +56,8 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const result = await answerOrbitSupport(message, context)
+    const fallback = await answerOrbitSupport(message, context)
+    const result = await geminiSupport(message, context, fallback)
     let conversationId: string | null = null
 
     if (user) try {

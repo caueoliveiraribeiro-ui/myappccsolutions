@@ -1,0 +1,40 @@
+/* Functional surfaces retain the existing Orbit typography and cyan/violet palette. */
+.wealth-dashboard section > header { box-shadow: 0 8px 30px #22d3ee0c; }
+.wealth-dashboard details > summary { transition: background-color .18s ease; }
+.wealth-dashboard details[open] > summary { background-color: #22d3ee0a; }
+.wealth-dashboard [data-slot="badge"] { line-height: 1.5; }
+.wealth-dashboard :is(input,select,textarea,button,a):focus-visible { outline: 2px solid #22d3ee; outline-offset: 3px; }
+@media (hover:hover) and (prefers-reduced-motion:no-preference) {
+  .wealth-dashboard .metric-card:hover { box-shadow: 0 10px 32px #22d3ee25, 0 4px 20px #8b5cf618; }
+  .wealth-dashboard details > summary:hover { background-color: #22d3ee0c; }
+}
+html[data-orbit-theme="light"]:has(.wealth-dashboard) :is(.wealth-dashboard,[role="dialog"],[data-radix-popper-content-wrapper]) {
+  --primary-foreground: #0f172a;
+}
+html[data-orbit-theme="light"]:has(.wealth-dashboard) :is(.wealth-dashboard,[role="dialog"],[data-radix-popper-content-wrapper]) :is([class*="text-white/"],[class*="text-blue-1"],[class*="text-sky-1"],[class*="text-gray-1"],[class*="text-gray-2"],[class*="text-gray-3"]) { color: #24405a; }
+html[data-orbit-theme="light"]:has(.wealth-dashboard) :is(.wealth-dashboard,[role="dialog"],[data-radix-popper-content-wrapper]) :is([class*="text-emerald-"],[class*="text-green-"],[class*="text-teal-"]) { color: #06654a; }
+html[data-orbit-theme="light"]:has(.wealth-dashboard) :is(.wealth-dashboard,[role="dialog"],[data-radix-popper-content-wrapper]) :is([class*="text-red-"],[class*="text-rose-"]) { color: #a51d36; }
+html[data-orbit-theme="light"]:has(.wealth-dashboard) :is(.wealth-dashboard,[role="dialog"],[data-radix-popper-content-wrapper]) :is([class*="text-amber-"],[class*="text-yellow-"],[class*="text-orange-"]) { color: #854000; }
+html[data-orbit-theme="light"] .wealth-dashboard :is([class*="text-transparent"],[class*="bg-clip-text"]) { color: #145e78; -webkit-text-fill-color: #145e78; }
+html[data-orbit-theme="light"] .wealth-dashboard .invoice-create-card { background: linear-gradient(130deg,#f2fcff,#f7f2ff); color: #172b44; }
+html[data-orbit-theme="light"] .wealth-dashboard :is([class*="bg-slate-8"],[class*="bg-gray-8"],[class*="bg-black/"]) { background-color: #edf5fa; }
+html[data-orbit-theme="light"] .wealth-dashboard :is([class*="text-slate-6"],[class*="text-gray-5"],[class*="text-gray-6"]) { color: #4a6176; }
+@media(max-width:767px) {
+  .wealth-dashboard form { gap: 14px; }
+  .wealth-dashboard form label { display: block; min-width: 0; font-size: 13px; line-height: 1.5; }
+  .wealth-dashboard :is(input:not([type="checkbox"]):not([type="radio"]),select) { min-height: 44px; max-width: 100%; }
+  .wealth-dashboard textarea { min-height: 88px; }
+  .wealth-dashboard details > summary { gap: 12px; padding: 14px; align-items: flex-start; }
+  .wealth-dashboard details > summary .truncate { white-space: normal; overflow: visible; overflow-wrap: anywhere; }
+  .wealth-dashboard [data-slot="badge"], .wealth-dashboard .current-price-pill { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+  .wealth-dashboard form > .flex { flex-wrap: wrap; }
+  .wealth-dashboard form > .flex > button { flex: 1 1 130px; white-space: normal; height: auto; min-height: 44px; }
+  .wealth-dashboard .invoice-scroll-region { max-height: none; overflow: visible; padding-right: 0; }
+  .wealth-dashboard .invoice-brand-colors input[type="color"] { padding: 4px; flex-shrink: 0; }
+  .wealth-dashboard .invoice-create-card summary > div { min-width: 0; align-items: flex-start; }
+  .wealth-dashboard .invoice-create-card summary > div > span { flex-shrink: 0; }
+  .wealth-dashboard .orbit-sidebar nav { padding-bottom: env(safe-area-inset-bottom); }
+}
+@media(prefers-reduced-motion:reduce) {
+  .wealth-dashboard details > summary { transition: none; }
+}

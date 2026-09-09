@@ -10,7 +10,7 @@ export type OrbitSupportResult = {
   reply: string
   suggestions?: string[]
   needsHuman?: boolean
-  mode: "knowledge"
+  mode: "knowledge" | "ai"
 }
 
 const normalize = (value: string) => value.trim().toLowerCase()

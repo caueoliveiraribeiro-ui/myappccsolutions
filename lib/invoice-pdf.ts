@@ -63,7 +63,12 @@ function fit(image: PdfImage, maxWidth: number, maxHeight: number) {
 }
 
 export function invoicePdf(invoice: Invoice) {
-  const navy = rgb("07111F"), ink = rgb("102033"), muted = rgb("53677B"), cyan = rgb("12BDE0")
+  const primary = /^#[0-9a-f]{6}$/i.test(String(invoice.issuer_primary_color || "")) ? String(invoice.issuer_primary_color).slice(1) : "07111F"
+  const accent = /^#[0-9a-f]{6}$/i.test(String(invoice.issuer_accent_color || "")) ? String(invoice.issuer_accent_color).slice(1) : "12BDE0"
+  const channels = primary.match(/../g)!.map(channel => parseInt(channel, 16) / 255).map(value => value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4)
+  const foreground = rgb(channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722 > 0.179 ? "000000" : "FFFFFF")
+  const navy = rgb(primary), ink = rgb("102033"), muted = rgb("53677B"), cyan = rgb(accent)
+  const accentInk = accent.match(/../g)!.map(channel => (parseInt(channel, 16) / 255 * 0.45).toFixed(3)).join(" ")
   const cyanSoft = rgb("DDF8FC"), pale = rgb("F5FAFC"), line = rgb("C6E9F0"), white = rgb("FFFFFF"), green = rgb("0D9F7D")
   const company = plain(invoice.issuer_company_name) || plain(invoice.client_company_name) || plain(invoice.client_name) || "YOUR COMPANY"
   const number = plain(invoice.invoice_number) || "DRAFT"
@@ -88,7 +93,7 @@ export function invoicePdf(invoice: Invoice) {
   const headerBrand = logo && logoSize
     ? [rect(42, 720, 194, 88, white),
        `q ${logoSize.width} 0 0 ${logoSize.height} ${42 + (194 - logoSize.width) / 2} ${720 + (88 - logoSize.height) / 2} cm /Logo Do Q`]
-    : wrap(company, 24).slice(0, 2).map((value, index) => text(value, 21, 42, 779 - index * 27, white, "F2"))
+    : wrap(company, 24).slice(0, 2).map((value, index) => text(value, 21, 42, 779 - index * 27, foreground, "F2"))
   const tableTop = 482
   const tableBottom = tableTop - Math.max(112, service.length * 17 + 58)
   const summaryY = tableBottom - 103
@@ -97,11 +102,11 @@ export function invoicePdf(invoice: Invoice) {
     rect(0, 702, 595, 140, navy),
     rect(0, 698, 595, 4, cyan),
     ...headerBrand,
-    rightText("INVOICE", 24, 553, 783, white, "F2"),
-    rightText(`# ${displayNumber}`, 12, 553, 758, rgb("9AEAF5"), "F2"),
+    rightText("INVOICE", 24, 553, 783, foreground, "F2"),
+    rightText(`# ${displayNumber}`, 12, 553, 758, foreground, "F2"),
     rect(435, 715, 118, 25, status === "PAID" ? rgb("DDF8EF") : cyanSoft),
     text(status, status === "AWAITING PAYMENT" ? 8 : 9, 443, 724, status === "PAID" ? green : ink, "F2"),
-    text("BILL TO", 9, 42, 660, cyan, "F2"),
+    text("BILL TO", 9, 42, 660, accentInk, "F2"),
     ...wrap(clientName, 30).slice(0, 2).map((value,index) => text(value, 15, 42, 637-index*18, ink, "F2")),
     ...(clientEmail ? [text(clientEmail, 9, 42, 592, muted)] : []),
     ...clientAddress.map((value, index) => text(value, 9, 42, 575 - index * 13, muted)),
@@ -110,11 +115,11 @@ export function invoicePdf(invoice: Invoice) {
     text(issued, 11, 379, 626, ink),
     text("DUE DATE", 8, 379, 602, muted, "F2"),
     text(due, 11, 379, 585, ink, "F2"),
-    text("SERVICE DETAILS", 9, 42, 505, cyan, "F2"),
+    text("SERVICE DETAILS", 9, 42, 505, accentInk, "F2"),
     rect(42, tableBottom, 511, tableTop-tableBottom, pale),
     rect(42, tableTop-32, 511, 32, navy),
-    text("DESCRIPTION", 9, 58, tableTop-21, white, "F2"),
-    rightText("AMOUNT", 9, 537, tableTop-21, white, "F2"),
+    text("DESCRIPTION", 9, 58, tableTop-21, foreground, "F2"),
+    rightText("AMOUNT", 9, 537, tableTop-21, foreground, "F2"),
     ...service.map((value,index) => text(value, 11, 58, tableTop-58-index*17, ink)),
     rightText(total, 13, 537, tableTop-58, ink, "F2"),
     stroke(42, tableBottom, 511, tableTop-tableBottom, line),
@@ -123,8 +128,8 @@ export function invoicePdf(invoice: Invoice) {
     text("Please include this reference with your payment.", 8, 42, summaryY+10, muted),
     rect(330, summaryY, 223, 80, navy),
     rect(330, summaryY, 4, 80, cyan),
-    text("INVOICE TOTAL", 9, 349, summaryY+57, rgb("9AEAF5"), "F2"),
-    rightText(total, 24, 537, summaryY+23, white, "F2"),
+    text("INVOICE TOTAL", 9, 349, summaryY+57, foreground, "F2"),
+    rightText(total, 24, 537, summaryY+23, foreground, "F2"),
     `${line} RG 0.7 w 42 105 m 553 105 l S`,
     text("Thank you for your business.", 12, 42, 80, ink, "F2"),
     text(company.slice(0, 65), 9, 42, 61, muted),

@@ -130,6 +130,7 @@ const items = await db(
   }
 )
 
+if (!items?.[0]?.id) return NextResponse.json({error:"This record was not saved. Refresh the page and try again."},{status:409})
 if (resource === "clients" && items?.[0] && ["charge_date", "billing_frequency", "service_amount", "currency"].some(key => key in changes)) {
   await recordFinancialAudit({ actorUserId: u.id, ownerUserId: current.user_id, resourceType: "client_billing", resourceId: id, action: "updated", before: { charge_date: current.charge_date, billing_frequency: current.billing_frequency, service_amount: current.service_amount, currency: current.currency }, after: { charge_date: items[0].charge_date, billing_frequency: items[0].billing_frequency, service_amount: items[0].service_amount, currency: items[0].currency }, requestSource: "client_directory" })
 }

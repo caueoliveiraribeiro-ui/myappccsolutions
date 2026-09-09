@@ -10,7 +10,7 @@ type Message = {
   role: "user" | "assistant"
   content: string
   sender?: "user" | "orbit_ai" | "support_agent" | "system"
-  mode?: "knowledge"
+  mode?: "knowledge" | "ai"
   suggestions?: string[]
   needsHuman?: boolean
 }

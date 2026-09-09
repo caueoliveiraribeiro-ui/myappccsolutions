@@ -12,7 +12,7 @@ export async function GET() {
   const user = await userForRequest()
   if (!user) return NextResponse.json({ error: "Please sign in again." }, { status: 401 })
   if (!(await accountAccess(user.id)).features.includes("invoices")) return upgradeResponse()
-  const rows = await db(`invoice_branding?user_id=eq.${encodeURIComponent(user.id)}&select=company_name,logo_data_url&limit=1`).catch(() => [])
+  const rows = await db(`invoice_branding?user_id=eq.${encodeURIComponent(user.id)}&select=company_name,logo_data_url,primary_color,accent_color&limit=1`).catch(() => [])
   return NextResponse.json({ branding: rows?.[0] || { company_name: "", logo_data_url: "" } })
 }
 export async function POST(request: Request) {
@@ -22,10 +22,15 @@ export async function POST(request: Request) {
   try {
     const input = await request.json()
     const logo = String(input.logo_data_url || "")
+    const primary = String(input.primary_color || "#07111F")
+    const accent = String(input.accent_color || "#12BDE0")
+    if (![primary, accent].every(color => /^#[0-9a-f]{6}$/i.test(color))) return NextResponse.json({ error: "Choose two valid invoice colors." }, { status: 400 })
     if (logo && (!/^data:image\/(png|jpeg|webp);base64,/i.test(logo) || logo.length > 1_300_000)) return NextResponse.json({ error: "Use a JPG, PNG, or WebP logo smaller than 2.5 MB after optimization." }, { status: 400 })
     const payload = {
       company_name: String(input.company_name || "").trim() || null,
       logo_data_url: logo || null,
+      primary_color: primary.toUpperCase(),
+      accent_color: accent.toUpperCase(),
       updated_at: new Date().toISOString(),
     }
     const existing = await db(`invoice_branding?user_id=eq.${encodeURIComponent(user.id)}&select=user_id&limit=1`)

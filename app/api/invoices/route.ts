@@ -22,14 +22,16 @@ export async function POST(request: Request) {
   try {
     const input = await request.json()
     // Foreign keys prove existence, not ownership. Check both links server-side.
+    let originalCurrency = ""
     for (const [field, resource] of [["client_id", "clients"], ["project_id", "projects"]] as const) {
       const id = input[field]
       if (!id) continue
       if (typeof id !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
         return NextResponse.json({ error: "Please choose a valid client or project." }, { status: 400 })
       }
-      const linked = await db(`${resource}?id=eq.${encodeURIComponent(id)}&user_id=eq.${encodeURIComponent(user.id)}&select=id&limit=1`)
+      const linked = await db(`${resource}?id=eq.${encodeURIComponent(id)}&user_id=eq.${encodeURIComponent(user.id)}&select=id,currency&limit=1`)
       if (!linked?.[0]) return NextResponse.json({ error: "This client or project is not available in your workspace." }, { status: 403 })
+      if (field === "client_id") originalCurrency = String(linked[0].currency || "").trim()
     }
     const client_name = String(input.client_name || "").trim()
     const requestedNumber = String(input.invoice_number || "").trim()
@@ -46,7 +48,7 @@ export async function POST(request: Request) {
       invoice_number = `${prefix}${Date.now().toString().slice(-6)}`
     }
 
-    const currency = String(input.currency || "USD").trim().toUpperCase()
+    const currency = String(originalCurrency || input.currency || "USD").trim().toUpperCase()
     const brandingRows = await db(`invoice_branding?user_id=eq.${encodeURIComponent(user.id)}&select=company_name,logo_data_url&limit=1`).catch(() => [])
     const branding = brandingRows?.[0] || {}
     const row = {
