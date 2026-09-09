@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react"
 import { createPortal } from "react-dom"
-import { Archive, Mail, X } from "lucide-react"
+import { Archive, FileText, Mail, X } from "lucide-react"
 import { ArchiveManagerButton } from "@/components/archive-manager"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -81,6 +81,7 @@ export function CrmEmailActions() {
   const [message, setMessage] = useState("")
   const [sending, setSending] = useState(false)
   const [archiving, setArchiving] = useState<string | null>(null)
+  const [creatingInvoice, setCreatingInvoice] = useState<string | null>(null)
 
   async function refreshConnection() {
     try {
@@ -158,6 +159,9 @@ export function CrmEmailActions() {
 
           const paymentNotes = form.querySelector<HTMLTextAreaElement>('textarea[name="payment_notes"]')?.closest("label")
           if (paymentNotes instanceof HTMLElement && !paymentNotes.hidden) paymentNotes.hidden = true
+          form.querySelectorAll<HTMLButtonElement>("button").forEach((button) => {
+            if (button.textContent?.trim() === "Delete history project") button.textContent = "Delete project"
+          })
 
           const id = `project-${index}`
           const slot = addSlot(form, id, "project")
@@ -293,6 +297,62 @@ export function CrmEmailActions() {
     }
   }
 
+  async function createProjectInvoice(target: EmailTarget) {
+    if (target.kind !== "project" || creatingInvoice) return
+    const projectName = fieldValue(target.form, "name")
+    const clientName = fieldValue(target.form, "client") || projectName
+    const clientEmail = fieldValue(target.form, "contact_email")
+    const amount = Number(fieldValue(target.form, "budget"))
+    if (!projectName || !Number.isFinite(amount) || amount < 0) {
+      toast.error("Add a project name and a valid project value before creating its invoice.")
+      return
+    }
+
+    setCreatingInvoice(target.id)
+    try {
+      const [projectResponse, clientResponse] = await Promise.all([
+        fetch("/api/data/projects", { cache: "no-store" }),
+        fetch("/api/data/clients", { cache: "no-store" }),
+      ])
+      const projects = projectResponse.ok ? (await projectResponse.json()).items || [] : []
+      const clients = clientResponse.ok ? (await clientResponse.json()).items || [] : []
+      const project = projects.find((item: Record<string, unknown>) =>
+        String(item.name || "").trim() === projectName &&
+        String(item.client || "").trim() === fieldValue(target.form, "client"),
+      )
+      const client = clients.find((item: Record<string, unknown>) =>
+        String(item.email || "").trim().toLowerCase() === clientEmail.toLowerCase() ||
+        String(item.name || item.company_name || "").trim().toLowerCase() === clientName.toLowerCase(),
+      )
+      const response = await fetch("/api/invoices", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          project_id: typeof project?.id === "string" ? project.id : undefined,
+          client_id: typeof client?.id === "string" ? client.id : undefined,
+          client_name: clientName,
+          client_email: clientEmail || undefined,
+          client_address: String(client?.address || ""),
+          service_name: fieldValue(target.form, "kind") || "Professional services",
+          description: fieldValue(target.form, "description") || `Invoice for ${projectName}`,
+          amount,
+          currency: fieldValue(target.form, "currency") || String(project?.currency || "USD"),
+          issue_date: new Date().toISOString().slice(0, 10),
+          due_date: fieldValue(target.form, "deadline") || undefined,
+          status: "draft",
+        }),
+      })
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(data.error || "The invoice could not be created.")
+      toast.success(`Invoice ${data.invoice?.invoice_number || "draft"} created from this project.`)
+      window.dispatchEvent(new CustomEvent("orbit:open-invoices"))
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "The invoice could not be created.")
+    } finally {
+      setCreatingInvoice(null)
+    }
+  }
+
   async function send(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!to.trim() || !subject.trim() || !message.trim()) return
@@ -338,6 +398,18 @@ export function CrmEmailActions() {
             >
               <Archive size={15} />
               {archiving === target.id ? "Archiving…" : target.kind === "client" ? "Archive client" : "Archive project"}
+            </Button>
+          )}
+          {target.kind === "project" && (
+            <Button
+              type="button"
+              variant="outline"
+              disabled={creatingInvoice !== null}
+              className="border-cyan-300/35 text-cyan-100 hover:bg-cyan-300/10"
+              onClick={() => void createProjectInvoice(target)}
+            >
+              <FileText size={15} />
+              {creatingInvoice === target.id ? "Creating invoice…" : "Create invoice"}
             </Button>
           )}
         </>,

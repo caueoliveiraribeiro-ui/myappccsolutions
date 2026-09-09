@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { AdminSupportInbox } from "@/components/admin-support-inbox"
-import { Search, ShieldCheck, Users, CreditCard, UserCog, ChevronLeft, ChevronRight, RefreshCw, Trash2, MessageCircleMore, X } from "lucide-react"
+import { Activity, KeyRound, Search, ShieldCheck, Users, CreditCard, UserCog, ChevronLeft, ChevronRight, RefreshCw, Trash2, MessageCircleMore, X } from "lucide-react"
 import { toast } from "sonner"
 
 type UserRow = {
@@ -159,6 +159,12 @@ export function AdminUserDirectory({ onSelect }: { onSelect: (email: string) => 
             <div className="flex flex-wrap gap-2">
               <Button type="button" onClick={() => setSupportOpen(true)} className="h-10 rounded-xl bg-cyan-300 px-4 font-semibold text-slate-950 hover:bg-cyan-200">
                 <MessageCircleMore size={15} className="mr-2" /> Support Inbox
+              </Button>
+              <Button type="button" variant="outline" asChild className="h-10 rounded-xl border-violet-300/25 bg-violet-300/[.06] text-violet-100 hover:bg-violet-300/[.12]">
+                <a href="/admin/security"><KeyRound size={15} className="mr-2" /> Owner MFA</a>
+              </Button>
+              <Button type="button" variant="outline" asChild className="h-10 rounded-xl border-emerald-300/25 bg-emerald-300/[.06] text-emerald-100 hover:bg-emerald-300/[.12]">
+                <a href="/admin/health"><Activity size={15} className="mr-2" /> Automation health</a>
               </Button>
               <Button variant="outline" onClick={load} disabled={busy} className="h-10 rounded-xl border-white/10 bg-white/[.03]">
                 <RefreshCw size={15} className={busy ? "mr-2 animate-spin" : "mr-2"} /> Refresh
