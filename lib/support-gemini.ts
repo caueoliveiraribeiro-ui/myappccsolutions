@@ -129,10 +129,16 @@ generationConfig: {
 }),
 })
 if (!response.ok) {
-  console.warn("SUPPORT_AI_FALLBACK", { status: response.status })
+  const errorText = await response.text()
+
+  console.error("GEMINI_API_ERROR", {
+    status: response.status,
+    body: errorText,
+    model,
+  })
+
   return fallback
 }
-
 const data = await response.json()
 
 const reply = data.candidates?.[0]?.content?.parts
@@ -147,12 +153,9 @@ const reply = data.candidates?.[0]?.content?.parts
 return reply && reply.length <= 4000
   ? { ...fallback, reply, mode: "ai" }
   : fallback
-
-} catch {
-  console.warn("SUPPORT_AI_FALLBACK", {
-    reason: "provider_unavailable",
-  })
+} catch (error) {
+  console.error("GEMINI_REQUEST_FAILED", error)
 
   return fallback
 }
- }
+}
