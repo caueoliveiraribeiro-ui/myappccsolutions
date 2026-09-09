@@ -5,7 +5,8 @@ const features=load("lib/plan-features.ts");let subscription=[],offline=false,us
 const headers={cookies:async()=>({get:()=>user?{value:"session"}:undefined})},auth={getSession:async()=>user};
 const database={hasDatabase:()=>true,db:async(path,init)=>{calls.push({path,init});if(path.startsWith("account_subscriptions")){if(offline)throw Error("offline");return subscription}return handler(path,init)}};
 const access=load("lib/plan-access.ts",{"@/lib/supabase":database,"@/lib/plan-features":features,"next/server":response,"next/headers":headers,"@/lib/auth":auth});
-const api=load("app/api/data/[resource]/route.ts",{"@/lib/supabase":database,"@/lib/plan-features":features,"@/lib/plan-access":access,"@/lib/google-calendar-sync":{syncCrmCalendarEvent:async()=>{},deleteCrmCalendarEvent:async()=>{}},"next/server":response,"next/headers":headers,"@/lib/auth":auth});
+const audit={recordFinancialAudit:async()=>{}};
+const api=load("app/api/data/[resource]/route.ts",{"@/lib/supabase":database,"@/lib/plan-features":features,"@/lib/plan-access":access,"@/lib/operations-log":audit,"@/lib/google-calendar-sync":{syncCrmCalendarEvent:async()=>{},deleteCrmCalendarEvent:async()=>{}},"next/server":response,"next/headers":headers,"@/lib/auth":auth});
 const plan=p=>{subscription=[{plan:p,status:"active",access_until:new Date(Date.now()+86400000).toISOString()}];offline=false;calls=[];handler=async()=>[]};
 const ctx=resource=>({params:Promise.resolve({resource})}),request=body=>({json:async()=>body});
 async function main(){
@@ -41,12 +42,12 @@ async function main(){
  assert.equal((await api.PATCH(request({id,name:"Preserve orphaned history"}),ctx("projects"))).status,200);
  assert.equal((await api.PATCH(request({id,source_client_id:owner}),ctx("projects"))).status,400);
  plan("personal");
- const mocked={"next/server":response,"next/headers":headers,"@/lib/auth":auth,"@/lib/supabase":database,"@/lib/plan-access":access,"@/lib/client-import":load("lib/client-import.ts")};
+ const mocked={"next/server":response,"next/headers":headers,"@/lib/auth":auth,"@/lib/supabase":database,"@/lib/plan-access":access,"@/lib/operations-log":audit,"@/lib/registration":{APP_ORIGIN:"https://orbit-lm.com"},"@/lib/client-import":load("lib/client-import.ts")};
  const importer=load("app/api/clients/import/route.ts",mocked);
  assert.equal((await importer.POST({text:async()=>{throw Error("Must not read forbidden payload")}})).status,403);
  plan("small_business");handler=async()=>{throw Error("ORBIT_QUOTA_clients")};
  assert.equal((await importer.POST({text:async()=>JSON.stringify({clients:[{name:"A",email:"a@example.com",phone:"123"}]})})).status,409);
- plan("personal");const invite=load("app/api/collaboration/route.ts",mocked);
+ subscription=[];calls=[];const invite=load("app/api/collaboration/route.ts",mocked);
  assert.equal((await invite.POST({url:"https://example.com",json:async()=>({email:"new@example.com"})})).status,403);
  assert.ok(!calls.some(c=>c.init?.method==="POST")); // no invitation or membership written for new registration
  plan("personal");
