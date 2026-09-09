@@ -8,14 +8,13 @@
 .wealth-dashboard > .fixed { pointer-events:none; animation:orbit-ambient-settle 16s ease-in-out infinite alternate; }
 @keyframes orbit-ambient-settle { to { opacity:.7; } }
 .wealth-dashboard [data-slot="card"] { border-radius:20px; border-color:#67e8f92e; box-shadow:inset 0 1px #ffffff08,0 8px 28px #02061716; }
-.wealth-dashboard h1,.wealth-dashboard h2,.wealth-dashboard h3 { letter-spacing:-.01em; text-wrap:balance; font-family:var(--font-fraunces),Georgia,serif; font-weight:560; }
-.wealth-dashboard .metric-card b { font-family:var(--font-fraunces),Georgia,serif; font-weight:560; letter-spacing:-.01em; }
+.wealth-dashboard h1,.wealth-dashboard h2,.wealth-dashboard h3 { letter-spacing:-.025em; text-wrap:balance; }
 .wealth-dashboard :is(input,select,textarea):focus-visible { outline:2px solid #22d3ee; outline-offset:2px; }
 .wealth-dashboard :is(button,summary) { touch-action:manipulation; }
 .wealth-dashboard summary { cursor:pointer; }
 .orbit-page-arrival { animation:orbit-arrival .38s cubic-bezier(.16,1,.3,1) both; }
 @keyframes orbit-arrival { from { opacity:.3; transform:translateY(8px); } to { opacity:1; transform:none; } }
-.orbit-home h1 { animation:orbit-arrival .7s cubic-bezier(.16,1,.3,1) both; font-family:var(--font-fraunces),Georgia,serif; font-weight:560; letter-spacing:-.01em; }
+.orbit-home h1 { animation:orbit-arrival .7s cubic-bezier(.16,1,.3,1) both; }
 .orbit-home h1 > span { background-size:180% 100%; animation:orbit-type-glow 9s ease-in-out infinite alternate; }
 @keyframes orbit-type-glow { to { background-position:100% 50%; } }
 /* Stop drifting the form while someone is typing. */
@@ -49,8 +48,6 @@ html[data-orbit-theme="light"] .wealth-dashboard [class*="bg-black/"] { backgrou
 
 /* Existing surfaces only: no decorative sections or changes to layout. */
 @property --orbit-border-angle { syntax:"<angle>"; initial-value:0deg; inherits:false; }
-:root { --orbit-neon:#22d3ee; --orbit-bloom:#22d3ee47; --orbit-inner:#67e8f930; --orbit-shade-cyan:#22d3ee13; --orbit-shade-purple:#a78bfa1c; }
-html[data-orbit-theme="light"] { --orbit-neon:#0891b2; --orbit-bloom:#0891b23f; --orbit-inner:#22d3ee30; }
 .wealth-dashboard { --orbit-neon:#22d3ee; --orbit-bloom:#22d3ee30; --orbit-inner:#67e8f91c; --orbit-shade-cyan:#22d3ee13; --orbit-shade-purple:#a78bfa1c; }
 html[data-orbit-theme="light"] .wealth-dashboard { --orbit-neon:#0891b2; --orbit-bloom:#0891b22b; --orbit-inner:#22d3ee20; --orbit-shade-cyan:#22d3ee19; --orbit-shade-purple:#8b5cf61a; }
 .wealth-dashboard :is([data-slot="card"],details[class~="border"],.current-price-pill) {

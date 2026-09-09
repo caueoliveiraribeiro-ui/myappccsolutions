@@ -1,6 +1,6 @@
 import type React from "react"
 import type { Metadata } from "next"
-import { Figtree, Fraunces } from "next/font/google"
+import { Figtree } from "next/font/google"
 import "./globals.css"
 import "./mobile.css"
 import "./orbit-polish.css"
@@ -22,13 +22,6 @@ const figtree = Figtree({
   variable: "--font-figtree",
 })
 
-const fraunces = Fraunces({
-  subsets: ["latin"],
-  display: "swap",
-  variable: "--font-fraunces",
-  axes: ["opsz"],
-})
-
 export const metadata: Metadata = {
   title: "Orbit LM — Life Management",
   description: "A secure operating system for clients, work, money, investments and everyday life.",
@@ -40,7 +33,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning className={`${figtree.variable} ${fraunces.variable} antialiased`}>
+    <html lang="en" suppressHydrationWarning className={`${figtree.variable} antialiased`}>
       <body className="font-sans">
         <OrbitThemeProvider>
         {children}
