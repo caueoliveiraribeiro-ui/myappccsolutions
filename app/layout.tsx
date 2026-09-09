@@ -14,6 +14,7 @@ import { OrbitUserProfile } from "@/components/orbit-user-profile"
 import { OrbitProfilePreferenceSync } from "@/components/orbit-profile-preference-sync"
 import { OrbitImprovementPrompt } from "@/components/orbit-improvement-prompt"
 import { OrbitArchiveControls } from "@/components/orbit-archive-controls"
+import { LoginPasswordVisibility } from "@/components/login-password-visibility"
 
 const figtree = Figtree({
   subsets: ["latin"],
@@ -44,6 +45,7 @@ export default function RootLayout({
         <OrbitProfilePreferenceSync />
         <OrbitImprovementPrompt />
         <OrbitArchiveControls />
+        <LoginPasswordVisibility />
         <Toaster richColors />
         </OrbitThemeProvider>
       </body>
