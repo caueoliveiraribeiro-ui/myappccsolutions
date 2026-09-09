@@ -1,3 +1,5 @@
+
+import Script from "next/script"
 import type React from "react"
 import type { Metadata } from "next"
 import { Figtree } from "next/font/google"
@@ -37,18 +39,34 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning className={`${figtree.variable} antialiased`}>
       <body className="font-sans">
         <OrbitThemeProvider>
-        {children}
-        <OrbitSupportChat />
-        <LeadsManagerGoogleOnly />
-        <LeadDirectoryEmailControls />
-        <CrmEmailActions />
-        <OrbitUserProfile />
-        <OrbitProfilePreferenceSync />
-        <OrbitImprovementPrompt />
-        <OrbitArchiveControls />
-        <LoginPasswordVisibility />
-        <Toaster richColors />
+          {children}
+
+          <OrbitSupportChat />
+          <LeadsManagerGoogleOnly />
+          <LeadDirectoryEmailControls />
+          <CrmEmailActions />
+          <OrbitUserProfile />
+          <OrbitProfilePreferenceSync />
+          <OrbitImprovementPrompt />
+          <OrbitArchiveControls />
+          <LoginPasswordVisibility />
+          <Toaster richColors />
         </OrbitThemeProvider>
+
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=G-E8H9G63P8V"
+          strategy="afterInteractive"
+        />
+
+        <Script id="google-analytics" strategy="afterInteractive">
+          {`
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-YOUR_REAL_ID');
+    `}
+        </Script>
       </body>
     </html>
   )
