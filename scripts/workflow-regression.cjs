@@ -28,8 +28,9 @@ async function main() {
   const partial=[{symbol:"BTC",asset_type:"Crypto",quantity:4,remaining_quantity:1.5,buy_price:100,quote_currency:"USD",purchased_at:now.toISOString().slice(0,10)}];
   assert.equal(monthSeries(1,[],[],[],partial,[],Number,String,"en",[])[0].investments,150);
   const investmentSource=fs.readFileSync("components/investments-v2.tsx","utf8");
-  assert.ok(investmentSource.includes("sourceCurrency(lot)===cg.currency"));
-  assert.ok(investmentSource.includes("editHolding(lot.id,{remaining_quantity:Math.max(0,remaining-quantity)})"));
+  assert.match(investmentSource,/sourceCurrency\(lot\)\s*===\s*cg\.currency/);
+  assert.ok(investmentSource.includes("editHolding(lot.id"));
+  assert.ok(investmentSource.includes("remaining_quantity: Math.max(0, remaining - quantity)"));
   assert.ok(!investmentSource.includes("async function adjustQuantity"));
   const overviewSource=fs.readFileSync("components/overview-v3.tsx","utf8");
   assert.ok(overviewSource.indexOf('title="Sales pipeline"') < overviewSource.indexOf('title="Awaiting payments"'));

@@ -5,7 +5,7 @@
   "scripts": {
     "build": "next build",
     "dev": "next dev",
-    "lint": "eslint .",
+    "lint": "eslint . --max-warnings=0",
     "test": "node scripts/run-regressions.cjs",
     "typecheck": "tsc --noEmit",
     "start": "next start",
@@ -69,11 +69,15 @@
     "zod": "3.25.76"
   },
   "devDependencies": {
+    "@eslint/eslintrc": "^3.3.7",
     "@tailwindcss/postcss": "^4.1.9",
     "@types/node": "^24",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "15.5.25",
     "postcss": "^8.5",
+    "prettier": "^3.9.6",
     "tailwindcss": "^4.1.9",
     "tw-animate-css": "1.3.3",
     "typescript": "^5"

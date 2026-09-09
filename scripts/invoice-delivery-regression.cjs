@@ -8,6 +8,7 @@ async function scenario({duplicate=false, failures=0, failComplete=false}={}) {
   const exports={};
   vm.runInNewContext(code,{exports,require(name){
     if(name==='@/lib/invoice-pdf')return{invoicePdf(row){assert.equal(row.issuer_logo_data,'test-logo');assert.equal(row.status,'awaiting_payment');return Buffer.from('%PDF-1.4 test')}};
+    if(name==='@/lib/operations-log')return{recordOperationalEvent:async()=>{},recordFinancialAudit:async()=>{}};
     if(name==='@/lib/supabase')return{async db(path,options){
       if(path==='rpc/orbit_claim_invoice_email'){if(claimed||duplicate)return[];claimed=true;return[invoice]}
       if(path==='rpc/orbit_complete_invoice_email'){completed++;if(failComplete)throw Error('DB unavailable');return[{...invoice,status:'sent'}]}

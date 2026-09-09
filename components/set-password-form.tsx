@@ -1,6 +1,7 @@
 "use client"
 
 import { FormEvent, useState } from "react"
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 
@@ -89,12 +90,12 @@ export function SetPasswordForm({
           during Stripe checkout.
         </p>
 
-        <a
+        <Link
           href="/"
           className="mt-7 inline-block rounded-xl bg-cyan-200 px-5 py-3 font-semibold text-slate-950"
         >
           Sign in to Orbit
-        </a>
+        </Link>
       </Card>
     )
   }

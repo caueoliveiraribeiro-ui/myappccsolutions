@@ -1,6 +1,7 @@
 "use client"
 
 import { FormEvent, useState } from "react"
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 
@@ -42,7 +43,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
         <p className="text-sm uppercase tracking-widest text-cyan-200">Orbit LM</p>
         <h1 className="mt-4 text-3xl font-semibold">Password reset complete</h1>
         <p className="mt-5 leading-7 text-slate-300">Your password has been changed. Sign in again with your new password.</p>
-        <a href="/" className="mt-7 inline-block rounded-xl bg-cyan-200 px-5 py-3 font-semibold text-slate-950">Sign in to Orbit</a>
+        <Link href="/" className="mt-7 inline-block rounded-xl bg-cyan-200 px-5 py-3 font-semibold text-slate-950">Sign in to Orbit</Link>
       </Card>
     )
   }

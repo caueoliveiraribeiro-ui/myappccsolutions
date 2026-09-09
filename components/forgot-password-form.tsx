@@ -1,6 +1,7 @@
 "use client"
 
 import { FormEvent, useState } from "react"
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -41,7 +42,7 @@ export function ForgotPasswordForm() {
         <Button type="submit" disabled={busy} className="h-12 w-full">{busy ? "Sending…" : "Send reset link"}</Button>
       </form>
       {message && <p role="status" className="mt-5 rounded-xl border border-cyan-300/20 bg-cyan-300/10 p-3 text-sm text-cyan-100">{message}</p>}
-      <a href="/" className="mt-6 inline-block text-sm text-cyan-200 underline">Back to sign in</a>
+      <Link href="/" className="mt-6 inline-block text-sm text-cyan-200 underline">Back to sign in</Link>
     </Card>
   )
 }

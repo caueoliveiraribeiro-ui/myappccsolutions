@@ -1,4 +1,5 @@
 import { SetPasswordForm } from "@/components/set-password-form"
+import Link from "next/link"
 
 export const dynamic = "force-dynamic"
 
@@ -30,12 +31,12 @@ export default async function SetPasswordPage({
             This password setup link is missing or invalid.
           </p>
 
-          <a
+          <Link
             href="/"
             className="mt-7 inline-block text-cyan-200 underline"
           >
             Return to Orbit
-          </a>
+          </Link>
         </div>
       )}
     </main>
