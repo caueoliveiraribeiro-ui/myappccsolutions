@@ -11,6 +11,7 @@ export function HotmartSubscription({
   email,
   owner,
   customization = false,
+  description,
 }: {
   name: string
   formattedPrice: string
@@ -18,6 +19,7 @@ export function HotmartSubscription({
   email?: string
   owner: boolean
   customization?: boolean
+  description?: string
 }) {
   const [busy, setBusy] = useState(false)
 
@@ -55,6 +57,7 @@ export function HotmartSubscription({
         </p>
 
         {customization && <p className="mt-4 text-sm leading-6 text-cyan-100">A separate Orbit workspace tailored to your business. Scope, integrations and support coverage are agreed before purchase.</p>}
+        {description && <p className="mt-4 text-sm leading-6 text-cyan-100">{description}</p>}
 
         {email && !customization && (
           <p className="my-5 break-all rounded-xl border border-cyan-200/20 p-3 text-sm leading-6">

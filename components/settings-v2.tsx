@@ -194,7 +194,7 @@ export function SettingsV2({ me, inviteOnly = false }: R) {
                 <div className="flex gap-3">
                   <ShieldCheck className="mt-0.5 shrink-0 text-cyan-200" size={17} />
                   <p className="text-xs leading-5 text-slate-400">
-                    Recipients currently need a verified Orbit account and eligible plan access. Only invite people you trust.
+                    The recipient receives a secure invitation email. They activate their own login after completing the US$12.99/month shared-access checkout. Only invite people you trust.
                   </p>
                 </div>
               </div>
